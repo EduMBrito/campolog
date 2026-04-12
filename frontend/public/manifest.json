@@ -1,0 +1,17 @@
+{
+  "name": "CampoLog - Caderno de Campo Digital",
+  "short_name": "CampoLog",
+  "description": "Sistema de Caderno de Campo Digital do IF Sertão Pernambucano",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#2D5A27",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

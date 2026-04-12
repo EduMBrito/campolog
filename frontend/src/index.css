@@ -1,0 +1,145 @@
+:root {
+  --verde-safra: #2D5A27;
+  --azul-log: #1E293B;
+  --ambar-alerta: #F59E0B;
+  --gelo-neutro: #F8FAFC;
+  --cinza-borda: #E2E8F0;
+  --branco: #FFFFFF;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: var(--gelo-neutro);
+  color: var(--azul-log);
+  min-height: 100vh;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background-color: var(--verde-safra);
+  color: var(--branco);
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.logo {
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.logo-icon {
+  font-size: 2.2rem;
+}
+
+.slogan {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  font-weight: 400;
+  opacity: 0.9;
+  font-style: italic;
+}
+
+.main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.status-card,
+.info-card {
+  background: var(--branco);
+  border: 1px solid var(--cinza-borda);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.status-card h2,
+.info-card h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--verde-safra);
+}
+
+.status-ok {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-ok {
+  background-color: #22C55E;
+}
+
+.dot-err {
+  background-color: #EF4444;
+}
+
+.status-text {
+  font-size: 0.875rem;
+  color: #64748B;
+}
+
+.info-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+
+.info-card li {
+  padding: 0.375rem 0;
+  padding-left: 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+}
+
+.info-card li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--verde-safra);
+  font-weight: 700;
+}
+
+.next {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cinza-borda);
+  font-size: 0.875rem;
+  color: #64748B;
+}
+
+.footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.8rem;
+  color: #94A3B8;
+  border-top: 1px solid var(--cinza-borda);
+}

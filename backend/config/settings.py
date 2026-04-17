@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
+from datetime import timedelta
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
     "django_filters",
     # Apps do CampoLog
     "core",
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -128,3 +130,20 @@ CORS_ALLOWED_ORIGINS = config(
     default="http://localhost:5173,http://127.0.0.1:5173",
     cast=Csv(),
 )
+
+# Definindo o modelo de usuário customizado
+AUTH_USER_MODEL = 'accounts.User'
+
+# Configuração do Django REST Framework para exigir JWT por padrão
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+# Configuração do ciclo de vida dos Tokens
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # Expira rápido por segurança
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),    # Mantém o usuário logado no celular por 1 semana
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}

@@ -1,6 +1,7 @@
-from django.urls import path
-from . import views
+from django.contrib import admin
+from django.urls import path, include
 
 urlpatterns = [
-    path("health/", views.health_check, name="health_check"),
+    path('admin/', admin.site.urls),
+    path('api/accounts/', include('accounts.urls')), # Incluímos a nossa nova API
 ]

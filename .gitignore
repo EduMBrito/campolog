@@ -39,3 +39,8 @@ Thumbs.db
 
 # Docker
 docker/data/
+node_modules/
+venv/
+__pycache__/
+*.sqlite3
+.env

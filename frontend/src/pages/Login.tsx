@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext'; // Ajuste o caminho se necessário
 import styles from './Login.module.css';
 import { useNavigate } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 
 export default function Login() {
     const [username, setUsername] = useState('');
@@ -34,8 +35,7 @@ export default function Login() {
             <div className={styles.loginCard}>
                 
                 <div className={styles.header}>
-                    <h1 className={styles.title}>CampoLog</h1>
-                    <p className={styles.subtitle}>Transformando manejo em informação</p>
+                    <img src={logoImg} alt="Logo CampoLog" className={styles.logo} />
                 </div>
 
                 {error && (

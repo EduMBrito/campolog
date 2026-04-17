@@ -22,6 +22,13 @@
   margin-bottom: 2rem;
 }
 
+.logo {
+  width: 100%;
+  max-width: 250px; /* Ajuste este valor para deixar a logo maior ou menor */
+  height: auto;
+  margin-bottom: 1rem;
+}
+
 .title {
   color: #1E293B; /* Azul Log */
   font-size: 1.875rem;

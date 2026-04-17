@@ -79,6 +79,15 @@ export default function Login() {
                         {isLoading ? 'Autenticando...' : 'Acessar Sistema'}
                     </button>
                 </form>
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                    <a 
+                        href="#" 
+                        onClick={() => alert('Para recuperar sua senha, entre em contato com o Administrador do TI do Instituto ou seu Professor Orientador.')}
+                        style={{ color: '#64748B', fontSize: '0.875rem', textDecoration: 'none' }}
+                    >
+                        Esqueci minha senha
+                    </a>
+</div>
 
             </div>
         </div>

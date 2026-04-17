@@ -1,76 +1,87 @@
-import React, { useContext, useState } from 'react'; // <-- Aqui está a correção principal
+import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
-import api from '../services/api'; // <-- Importando a nossa API
+import api from '../services/api';
+import styles from './Dashboard.module.css'; // <-- Importando nosso novo design
 
 export default function Dashboard() {
     const { user, logout } = useContext(AuthContext);
-    
-    // Estado para armazenar a nova senha digitada
     const [novaSenha, setNovaSenha] = useState('');
 
-    // Função para disparar a troca de senha
     const handleTrocarSenha = async () => {
         if (!novaSenha) return alert("Digite a nova senha");
         try {
             await api.patch(`/accounts/users/${user.id}/`, { password: novaSenha });
             alert("Senha alterada com sucesso!");
-            setNovaSenha(''); // Limpa o campo após o sucesso
+            setNovaSenha('');
         } catch (error) {
             alert("Erro ao alterar senha. Tente novamente.");
         }
     };
 
     return (
-        <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-            <h1 style={{ color: '#1E293B' }}>Painel Principal</h1>
-            <p>Bem-vindo ao CampoLog, <strong>{user?.username}</strong>!</p>
-            <p>Seu papel no sistema é: <span style={{ color: '#2D5A27', fontWeight: 'bold' }}>{user?.role}</span></p>
+        <div className={styles.container}>
             
-            {/* Link exclusivo do ADMIN para gerenciar usuários */}
-            {user?.role === 'ADMIN' && (
-                <Link to="/usuarios" style={{ display: 'inline-block', marginTop: '1rem', marginBottom: '1rem', color: '#2D5A27', textDecoration: 'none', fontWeight: 'bold', border: '1px solid #2D5A27', padding: '0.5rem 1rem', borderRadius: '6px' }}>
-                    ⚙️ Acessar Gestão de Usuários
-                </Link>
-            )}
+            {/* O Cartão Centralizado de Boas-Vindas */}
+            <div className={styles.heroCard}>
+                <h1 className={styles.heroTitle}>Olá, {user?.username}!</h1>
+                <p style={{ color: '#94A3B8', margin: 0 }}>Bem-vindo de volta ao CampoLog.</p>
+                <div className={styles.roleBadge}>{user?.role}</div>
+            </div>
 
-            {/* Bloco de Segurança: Trocar a própria senha */}
-            <div style={{ marginTop: '2rem', padding: '1.5rem', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: 'white' }}>
-                <h3 style={{ marginTop: 0, color: '#1E293B' }}>Segurança da Conta</h3>
-                <div style={{ display: 'flex', gap: '10px' }}>
+            <div className={styles.grid}>
+                {/* Lado Esquerdo: Navegação */}
+                <div className={styles.card}>
+                    <h2 className={styles.cardTitle}>Módulos do Sistema</h2>
+                    
+                    {/* Link do Admin */}
+                    {user?.role === 'ADMIN' && (
+                        <Link to="/usuarios" className={styles.navLink}>
+                            ⚙️ Gestão de Usuários
+                        </Link>
+                    )}
+
+                    {/* Links Gerais */}
+                    <Link to="/culturas" className={styles.navLink}>
+                        🌱 Catálogo de Culturas
+                    </Link>
+
+                    <Link to="/talhoes" className={styles.navLink}>
+                        🗺️ Gestão de Talhões
+                    </Link>
+                    
+                    <Link to="/ciclos" className={styles.navLink}>
+                         🔄 Gestão de Ciclos de Cultivo
+                    </Link>
+                </div>
+
+                {/* Lado Direito: Segurança */}
+                <div className={styles.card}>
+                    <h2 className={styles.cardTitle}>Segurança da Conta</h2>
+                    <p style={{ fontSize: '0.875rem', color: '#64748B', marginBottom: '1rem' }}>
+                        Atualize sua senha de acesso ao sistema.
+                    </p>
+                    
                     <input 
                         type="password" 
                         placeholder="Digite sua nova senha" 
                         value={novaSenha} 
                         onChange={e => setNovaSenha(e.target.value)}
-                        style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #E2E8F0', flex: 1 }}
+                        className={styles.input}
                     />
-                    <button 
-                        onClick={handleTrocarSenha} 
-                        style={{ padding: '0.75rem 1.5rem', backgroundColor: '#1E293B', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                    >
-                        Alterar Senha
+                    <button onClick={handleTrocarSenha} className={styles.actionButton}>
+                        Confirmar Alteração
                     </button>
                 </div>
             </div>
 
-            {/* Botão de Sair */}
-            <button 
-                onClick={logout}
-                style={{
-                    marginTop: '2rem',
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#dc2626',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    width: '100%'
-                }}
-            >
-                Sair do Sistema (Logout)
-            </button>
+            {/* O Botão de Sair Discreto no final */}
+            <div className={styles.logoutContainer}>
+                <button onClick={logout} className={styles.logoutBtn}>
+                    Sair do Sistema
+                </button>
+            </div>
+
         </div>
     );
 }

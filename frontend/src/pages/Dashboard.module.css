@@ -1,0 +1,134 @@
+.container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Cartão de Boas-vindas (Hero) */
+.heroCard {
+  background-color: #1E293B; /* Azul Log */
+  color: white;
+  padding: 2.5rem 2rem;
+  border-radius: 12px;
+  text-align: center; /* Aqui aplicamos a sua ideia de centralizar! */
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.heroTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+}
+
+.roleBadge {
+  background-color: #2D5A27; /* Verde Safra */
+  color: white;
+  display: inline-block;
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  margin-top: 0.5rem;
+}
+
+/* Estrutura de Colunas */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr; /* Fica uma coluna só no celular */
+  }
+}
+
+/* Cartões Internos */
+.card {
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.cardTitle {
+  margin-top: 0;
+  color: #1E293B;
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #E2E8F0;
+  padding-bottom: 0.5rem;
+}
+
+/* Botões de Navegação (Menu) */
+.navLink {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background-color: #F8FAFC;
+  color: #1E293B;
+  text-decoration: none;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.navLink:hover {
+  background-color: #2D5A27; /* Fica verde ao passar o mouse */
+  color: white;
+  border-color: #2D5A27;
+}
+
+/* Formulário de Senha */
+.input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  box-sizing: border-box;
+  margin-bottom: 1rem; /* Dá o respiro entre a caixa e o botão que você pediu */
+}
+
+.actionButton {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #1E293B;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.actionButton:hover {
+  background-color: #0f172a;
+}
+
+/* Botão de Sair Minimalista */
+.logoutContainer {
+  margin-top: 2rem;
+  text-align: right;
+}
+
+.logoutBtn {
+  padding: 0.75rem 2rem;
+  background-color: transparent;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.logoutBtn:hover {
+  background-color: #fef2f2;
+}

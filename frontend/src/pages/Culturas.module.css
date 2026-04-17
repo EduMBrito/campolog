@@ -23,7 +23,7 @@
 
 @media (max-width: 768px) {
   .grid {
-    grid-template-columns: 1fr; /* Responsivo para mobile */
+    grid-template-columns: 1fr;
   }
 }
 
@@ -56,7 +56,7 @@
   margin-bottom: 0.5rem;
 }
 
-.input, .select {
+.input {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid #E2E8F0;
@@ -78,7 +78,6 @@
 
 .button:hover { background-color: #23481f; }
 
-/* Estilos da Tabela */
 .tableWrapper {
   overflow-x: auto;
 }
@@ -100,21 +99,19 @@
   font-weight: 600;
 }
 
-.roleBadge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
+.actionButton {
+  background: none;
+  border: none;
+  cursor: pointer;
   font-weight: bold;
-  background-color: #E2E8F0;
-  color: #1E293B;
+  margin-right: 10px;
 }
 
-.roleBadge.admin { background-color: #fee2e2; color: #991b1b; }
-.roleBadge.docente { background-color: #dbeafe; color: #1e40af; }
-.roleBadge.discente { background-color: #dcfce3; color: #166534; }
-.roleBadge.auditor { background-color: #fef3c7; color: #92400e; }
+.editBtn { color: #2D5A27; }
+.deleteBtn { color: #dc2626; }
 
 /* --- Adições para a Pesquisa e Rolagem --- */
+
 .searchContainer {
   margin-bottom: 1.5rem;
 }
@@ -123,7 +120,7 @@
   width: 100%;
   padding: 0.6rem 1rem;
   border: 1px solid #E2E8F0;
-  border-radius: 999px;
+  border-radius: 999px; /* Bordas bem arredondadas para estilo de "pílula de pesquisa" */
   font-size: 0.9rem;
   background-color: #F8FAFC;
   transition: all 0.2s;
@@ -136,7 +133,7 @@
   box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.1);
 }
 
-/* Transformando a tabela em scrollable */
+/* Modificamos o wrapper para ter barra de rolagem se passar de 400px de altura */
 .tableWrapper {
   overflow-x: auto;
   max-height: 400px; 
@@ -145,7 +142,7 @@
   border-radius: 6px;
 }
 
-/* Fixa o cabeçalho no topo da rolagem */
+/* Fixa o cabeçalho no topo enquanto a tabela rola */
 .table th {
   position: sticky;
   top: 0;

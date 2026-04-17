@@ -1,7 +1,9 @@
-from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/accounts/', include('accounts.urls')), # Incluímos a nossa nova API
+    # Rotas do Módulo 1 (Utilizadores)
+    path('accounts/', include('accounts.urls')), 
+    
+    # Rotas do Módulo 2 (Talhões e Culturas)
+    path('agronomia/', include('agronomia.urls')),
 ]

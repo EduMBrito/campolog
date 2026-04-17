@@ -7,6 +7,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import UsuariosAdmin from './pages/UsuariosAdmin';
+import Culturas from './pages/Culturas';
+import Talhoes from './pages/Talhoes';
+import Ciclos from './pages/Ciclos';
+
 
 function AppRoutes() {
     const { user } = useContext(AuthContext);
@@ -23,9 +27,15 @@ function AppRoutes() {
                 {/* Futura tela de Usuários: Apenas ADMIN poderá acessar! */}
                 <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                     <Route path="/usuarios" element={<UsuariosAdmin />} />
+                
+                {/* Rotas do Módulo 2 */}
+                <Route path="/culturas" element={<Culturas />} />
+                <Route path="/talhoes" element={<Talhoes />} />
+                <Route path="/ciclos" element={<Ciclos />} />
                 </Route> */
             </Route>
 
+            
             {/* ROTA CORINGA: Digitou uma URL que não existe? Manda pro Início */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

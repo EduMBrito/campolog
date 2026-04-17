@@ -1,0 +1,47 @@
+.container { padding: 2rem; max-width: 1200px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif; }
+.header { margin-bottom: 2rem; }
+.title { color: #1E293B; margin: 0 0 0.5rem 0; }
+.grid { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start; }
+@media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+.card { background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.cardTitle { margin-top: 0; color: #2D5A27; font-size: 1.25rem; margin-bottom: 1.5rem; border-bottom: 2px solid #E2E8F0; padding-bottom: 0.5rem; }
+.formGroup { margin-bottom: 1rem; }
+.label { display: block; font-size: 0.875rem; font-weight: 600; color: #1E293B; margin-bottom: 0.5rem; }
+.input, .select { width: 100%; padding: 0.75rem; border: 1px solid #E2E8F0; border-radius: 6px; box-sizing: border-box; }
+.button { width: 100%; background-color: #2D5A27; color: white; padding: 0.75rem; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 1rem; }
+.button:hover { background-color: #23481f; }
+.searchContainer { margin-bottom: 1.5rem; }
+.searchInput { width: 100%; padding: 0.6rem 1rem; border: 1px solid #E2E8F0; border-radius: 999px; font-size: 0.9rem; background-color: #F8FAFC; transition: all 0.2s; }
+.searchInput:focus { outline: none; border-color: #2D5A27; background-color: white; box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.1); }
+.tableWrapper { overflow-x: auto; max-height: 400px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 6px; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 1rem; text-align: left; border-bottom: 1px solid #E2E8F0; }
+.table th { position: sticky; top: 0; background-color: #F8FAFC; color: #1E293B; font-weight: 600; z-index: 1; }
+.actionButton { background: none; border: none; cursor: pointer; font-weight: bold; margin-right: 10px; }
+.editBtn { color: #2D5A27; }
+.deleteBtn { color: #dc2626; }
+
+/* Badges de Status do Ciclo */
+.badge { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: bold; }
+.status_planejado { background-color: #E2E8F0; color: #475569; }
+.status_ativo { background-color: #dcfce3; color: #166534; }
+.status_colhido { background-color: #dbeafe; color: #1e40af; }
+.status_cancelado { background-color: #fee2e2; color: #991b1b; }
+
+/* Indicador visual para cabeçalhos que podem ser ordenados */
+.sortableHeader {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.sortableHeader:hover {
+  background-color: #E2E8F0;
+}
+
+/* Um pequeno espaço para o ícone de ordenação (setinha) */
+.sortIcon {
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+  color: #64748B;
+}

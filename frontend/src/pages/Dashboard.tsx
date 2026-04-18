@@ -51,7 +51,11 @@ export default function Dashboard() {
                     </Link>
                     
                     <Link to="/ciclos" className={styles.navLink}>
-                         🔄 Gestão de Ciclos de Cultivo
+                        🔄 Gestão de Ciclos de Cultivo
+                    </Link>
+
+                    <Link to="/diario" className={styles.navLink}>
+                        📝 Diário de Campo (Anotações e Colheitas)
                     </Link>
                 </div>
 

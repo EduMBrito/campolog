@@ -6,4 +6,7 @@ urlpatterns = [
     
     # Rotas do Módulo 2 (Talhões e Culturas)
     path('agronomia/', include('agronomia.urls')),
+
+    # Rotas do Módulo 3 (Caderno de Campo)
+    path('caderno/', include('caderno.urls')),
 ]

@@ -31,7 +31,8 @@ INSTALLED_APPS = [
     # Apps do CampoLog
     "core",
     "accounts",
-    "agronomia"
+    "agronomia",
+    "caderno",
 ]
 
 MIDDLEWARE = [

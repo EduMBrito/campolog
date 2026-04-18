@@ -10,6 +10,7 @@ import UsuariosAdmin from './pages/UsuariosAdmin';
 import Culturas from './pages/Culturas';
 import Talhoes from './pages/Talhoes';
 import Ciclos from './pages/Ciclos';
+import DiarioCampo from './pages/DiarioCampo';
 
 
 function AppRoutes() {
@@ -32,6 +33,9 @@ function AppRoutes() {
                 <Route path="/culturas" element={<Culturas />} />
                 <Route path="/talhoes" element={<Talhoes />} />
                 <Route path="/ciclos" element={<Ciclos />} />
+
+                {/* Rotas do Módulo 3 */}
+                <Route path="/diario" element={<DiarioCampo />} />
                 </Route> */
             </Route>
 

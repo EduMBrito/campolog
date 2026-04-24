@@ -18,4 +18,5 @@ export const agronomiaService = {
     createCiclo: (data: any) => api.post('/agronomia/ciclos/', data),
     updateCiclo: (id: number, data: any) => api.put(`/agronomia/ciclos/${id}/`, data),
     deleteCiclo: (id: number) => api.delete(`/agronomia/ciclos/${id}/`),
+    getEstatisticas: () => api.get('/agronomia/estatisticas/'),
 };

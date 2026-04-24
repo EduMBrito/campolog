@@ -26,6 +26,9 @@ class RegistoCampo(models.Model):
     
     # Campos Opcionais para métricas
     quantidade = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 2 Litros de calda, 10kg colhidos")
+
+    # NOVO CAMPO: upload_to cria subpastas por data para não bagunçar o servidor
+    anexo = models.FileField(upload_to='diario/%Y/%m/%d/', blank=True, null=True)
     
     class Meta:
         ordering = ['-data_registo'] # Ordena sempre do mais recente para o mais antigo

@@ -1,0 +1,113 @@
+.container {
+  max-width: 600px; /* Mais estreito para focar na leitura mobile */
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #1E293B;
+}
+
+.headerCard {
+  background-color: #2D5A27;
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.culturaTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+}
+
+.badgesContainer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+/* Timeline Styles */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #E2E8F0;
+}
+
+.timelineItem {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.timelineDot {
+  position: absolute;
+  left: -2.4rem;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #2D5A27;
+  border: 4px solid white;
+  box-shadow: 0 0 0 1px #E2E8F0;
+}
+
+.timelineContent {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.itemDate {
+  color: #64748B;
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+.itemType {
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+}
+
+.itemDescription {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+.itemAuthor {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  margin-top: 1rem;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 0.5rem;
+}

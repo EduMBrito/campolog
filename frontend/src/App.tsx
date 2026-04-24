@@ -11,6 +11,7 @@ import Culturas from './pages/Culturas';
 import Talhoes from './pages/Talhoes';
 import Ciclos from './pages/Ciclos';
 import DiarioCampo from './pages/DiarioCampo';
+import Rastreabilidade from './pages/Rastreabilidade';
 
 
 function AppRoutes() {
@@ -20,7 +21,8 @@ function AppRoutes() {
         <Routes>
             {/* ROTA PÚBLICA: Se o usuário já estiver logado e tentar ir pro /login, joga ele pro Dashboard */}
             <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-
+            <Route path="/rastreabilidade/:id" element={<Rastreabilidade />} />
+            
             {/* ROTAS PROTEGIDAS: Tudo que estiver aqui dentro passa pelo nosso Guarda de Segurança */}
             <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<Dashboard />} />

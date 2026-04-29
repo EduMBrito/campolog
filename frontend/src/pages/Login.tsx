@@ -1,8 +1,9 @@
 import React, { useState, useContext } from 'react';
-import { AuthContext } from '../contexts/AuthContext'; // Ajuste o caminho se necessário
+import { AuthContext } from '../contexts/AuthContext'; 
 import styles from './Login.module.css';
 import { useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';
+import api from '../services/api'; // <-- Nova importação crucial!
 
 export default function Login() {
     const [username, setUsername] = useState('');
@@ -10,21 +11,50 @@ export default function Login() {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
-    // Puxa a função de login da nossa "memória global"
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();    
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault(); // Impede a página de recarregar
+        e.preventDefault(); 
         setError('');
         setIsLoading(true);
 
         try {
-            await login(username, password);
-            // Se der certo, vamos redirecionar para o painel principal
+            const response = await api.post('/accounts/login/', { username, password });
+            
+            // LOG DE DEPURAÇÃO: Abra o F12 no navegador para ver o que aparece aqui
+            console.log("Dados recebidos do servidor:", response.data);
+
+            const token = response.data.token || response.data.access;
+            
+            // LÓGICA DE PERFIL ROBUSTA:
+            // 1. Tenta pegar o 'role' do objeto user
+            // 2. Tenta pegar o 'role' direto da raiz da resposta
+            // 3. Se for superuser do Django (is_superuser), força ADMINISTRADOR
+            // 4. Se nada funcionar, aí sim vai para DISCENTE
+            let roleFinal = 'DISCENTE';
+            
+            if (response.data.user?.role) {
+                roleFinal = response.data.user.role;
+            } else if (response.data.role) {
+                roleFinal = response.data.role;
+            } else if (response.data.user?.is_superuser || response.data.is_superuser) {
+                roleFinal = 'ADMINISTRADOR';
+            }
+
+            const userData = {
+                id: response.data.user?.id || response.data.id,
+                username: response.data.user?.username || response.data.username || username,
+                role: roleFinal.toUpperCase().trim() 
+            };
+
+            console.log("Objeto de usuário que será salvo offline:", userData);
+
+            login(token, userData);
             navigate('/'); 
         } catch (err) {
-            setError('Usuário ou senha incorretos. Verifique suas credenciais.');
+            console.error("Erro no login:", err);
+            setError('Usuário ou senha incorretos ou erro de conexão.');
         } finally {
             setIsLoading(false);
         }
@@ -82,12 +112,12 @@ export default function Login() {
                 <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                     <a 
                         href="#" 
-                        onClick={() => alert('Para recuperar sua senha, entre em contato com o Administrador do TI do Instituto ou seu Professor Orientador.')}
+                        onClick={(e) => { e.preventDefault(); alert('Para recuperar sua senha, entre em contato com o Administrador do TI do Instituto ou seu Professor Orientador.'); }}
                         style={{ color: '#64748B', fontSize: '0.875rem', textDecoration: 'none' }}
                     >
                         Esqueci minha senha
                     </a>
-</div>
+                </div>
 
             </div>
         </div>

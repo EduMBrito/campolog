@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { cadernoService } from '../services/cadernoService';
 import { agronomiaService } from '../services/agronomiaService';
 import styles from './DiarioCampo.module.css';
+import { offlineQueue } from '../utils/offlineQueue';
 
 export default function DiarioCampo() {
     const [registos, setRegistos] = useState<any[]>([]);
@@ -35,10 +36,28 @@ export default function DiarioCampo() {
                 cadernoService.getRegistos(),
                 agronomiaService.getCiclos()
             ]);
+            
+            // 1. Atualiza a tela com os dados novos do servidor
             setRegistos(resRegistos.data);
             setCiclos(resCiclos.data);
-        } catch (error) {
-            console.error("Erro ao carregar dados:", error);
+
+            // 2. MÁGICA OFFLINE: Guarda uma cópia de segurança na memória do celular
+            localStorage.setItem('campolog_cache_ciclos', JSON.stringify(resCiclos.data));
+            localStorage.setItem('campolog_cache_registos', JSON.stringify(resRegistos.data));
+
+        } catch (error: any) {
+            // 3. Se deu erro de rede (offline), puxa a cópia de segurança!
+            if (!navigator.onLine || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+                console.log("Modo Offline ativado: Carregando opções da memória interna.");
+                
+                const ciclosCache = localStorage.getItem('campolog_cache_ciclos');
+                const registosCache = localStorage.getItem('campolog_cache_registos');
+
+                if (ciclosCache) setCiclos(JSON.parse(ciclosCache));
+                if (registosCache) setRegistos(JSON.parse(registosCache));
+            } else {
+                console.error("Erro ao carregar dados:", error);
+            }
         } finally {
             setLoading(false);
         }
@@ -55,17 +74,25 @@ export default function DiarioCampo() {
         }
     };
 
+// Função auxiliar que transforma o Arquivo Físico num Texto Gigante (Base64)
+    const converterParaBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+    };
+
     const handleSalvar = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Agora usamos FormData em vez de um objeto JSON simples
         const formData = new FormData();
         formData.append('ciclo', cicloId);
         formData.append('tipo', tipo);
         formData.append('descricao', descricao);
         if (quantidade) formData.append('quantidade', quantidade);
         
-        // Só anexa o arquivo físico se o usuário tiver selecionado um novo
         if (arquivo) {
             formData.append('anexo', arquivo);
         }
@@ -79,9 +106,34 @@ export default function DiarioCampo() {
             limparFormulario();
             carregarDados();
             alert("Registro salvo com sucesso!");
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao salvar o registro. Verifique os campos e o tamanho do arquivo.");
+        } catch (error: any) {
+            if (!navigator.onLine || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+                
+                // MÁGICA DA FOTO OFFLINE
+                let fotoBase64 = null;
+                if (arquivo) {
+                    try {
+                        fotoBase64 = await converterParaBase64(arquivo);
+                    } catch (err) {
+                        console.error("Erro ao converter imagem", err);
+                    }
+                }
+
+                const dadosParaSalvar = {
+                    ciclo: cicloId,
+                    tipo: tipo,
+                    descricao: descricao,
+                    quantidade: quantidade,
+                    fotoBase64: fotoBase64 // Guardamos o texto da imagem aqui!
+                };
+                
+                offlineQueue.salvar(dadosParaSalvar);
+                alert('📡 Você está offline! Seu registro (com a foto) foi salvo no aparelho e será enviado automaticamente quando a internet voltar.');
+                limparFormulario();
+            } else {
+                console.error(error);
+                alert("Erro ao salvar o registro. Verifique os campos e o tamanho do arquivo.");
+            }
         }
     };
 

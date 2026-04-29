@@ -5,7 +5,7 @@ import styles from './UsuariosAdmin.module.css';
 
 export default function UsuariosAdmin() {
     const [usuarios, setUsuarios] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
 
     // Novo estado para a barra de pesquisa
     const [termoPesquisa, setTermoPesquisa] = useState('');

@@ -2,12 +2,13 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'password']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'password', 'is_superuser']
         extra_kwargs = {'password': {'write_only': True}} # A senha não volta no GET
 
     def create(self, validated_data):
@@ -32,12 +33,17 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
+    def validate(self, attrs):
+        # 1. Executa a validação padrão (que gera o access token e o refresh token)
+        data = super().validate(attrs)
 
-        # Adicionando nossos dados customizados no payload do token
-        token['username'] = user.username
-        token['role'] = user.role
-        
-        return token
+        # 2. INJEÇÃO DE DADOS: Colocamos o objeto 'user' dentro da resposta
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            # Pegamos o role. Se por algum motivo o campo vier vazio, mandamos 'DISCENTE'
+            'role': getattr(self.user, 'role', 'DISCENTE'), 
+            'is_superuser': self.user.is_superuser
+        }
+
+        return data

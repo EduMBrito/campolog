@@ -1,42 +1,61 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useState, useEffect, ReactNode } from 'react';
 import api from '../services/api';
 
-// Criamos o contexto avisando ao TypeScript que ele aceita "qualquer coisa" (any) por enquanto
-export const AuthContext = createContext<any>(null);
+interface User {
+    id: number;
+    username: string;
+    role: string;
+}
 
-// Aqui tipamos o 'children' como ReactNode
+interface AuthContextData {
+    user: User | null;
+    login: (token: string, userData: User) => void;
+    logout: () => void;
+    loading: boolean;
+}
+
+export const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const loadUser = async () => {
-            const token = localStorage.getItem('access');
-            if (token) {
-                try {
-                    const response = await api.get('/accounts/users/me/');
-                    setUser(response.data);
-                } catch (error) {
-                    console.error("Sessão expirada ou erro ao carregar usuário.");
+        const restaurarSessao = () => {
+            try {
+                const token = localStorage.getItem('token');
+                const storedUser = localStorage.getItem('user');
+
+                if (token && storedUser) {
+                    // Configura o token para todas as futuras chamadas de API
+                    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                    
+                    // Recupera os dados do usuário do texto salvo
+                    const parsedUser = JSON.parse(storedUser);
+                    setUser(parsedUser);
+                    console.log("Sessão restaurada com sucesso:", parsedUser.username);
                 }
+            } catch (error) {
+                console.error("Erro ao recuperar sessão local:", error);
+                localStorage.clear(); // Limpa se houver dados corrompidos
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
-        loadUser();
+
+        restaurarSessao();
     }, []);
 
-    const login = async (username: string, password: string) => {
-        const response = await api.post('/accounts/login/', { username, password });
-        localStorage.setItem('access', response.data.access);
-        localStorage.setItem('refresh', response.data.refresh);
-        
-        const userResponse = await api.get('/accounts/users/me/');
-        setUser(userResponse.data);
+    const login = (token: string, userData: User) => {
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        setUser(userData);
     };
 
     const logout = () => {
-        localStorage.removeItem('access');
-        localStorage.removeItem('refresh');
+        localStorage.clear();
+        delete api.defaults.headers.common['Authorization'];
         setUser(null);
     };
 

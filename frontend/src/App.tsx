@@ -1,7 +1,7 @@
-import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext } from './contexts/AuthContext';
-
+import { offlineQueue } from './utils/offlineQueue';
+import { useEffect, useContext } from 'react';
 // Importação das nossas Páginas e Componentes
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -49,6 +49,18 @@ function AppRoutes() {
 }
 
 export default function App() {
+    // Gatilho que observa a internet do dispositivo
+    useEffect(() => {
+    // Tenta sincronizar assim que o sistema abre
+    offlineQueue.sincronizarPendentes();
+
+    // Tenta sincronizar no exato segundo em que o celular reconectar
+    window.addEventListener('online', offlineQueue.sincronizarPendentes);
+
+    return () => {
+      window.removeEventListener('online', offlineQueue.sincronizarPendentes);
+    };
+  }, []);
     return (
         <Router>
             <AppRoutes />

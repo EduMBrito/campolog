@@ -15,4 +15,5 @@ export const cadernoService = {
     deleteRegisto: (id: number) => api.delete(`/caderno/diario/${id}/`),
 
     getRelatorioCiclo: (id: string) => api.get(`/caderno/relatorios/ciclo/${id}/`),
+    
 };

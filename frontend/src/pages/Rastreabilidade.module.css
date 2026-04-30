@@ -111,3 +111,48 @@
   border-top: 1px solid #F1F5F9;
   padding-top: 0.5rem;
 }
+
+/* =========================================
+   CONFIGURAÇÕES LOCAIS PARA IMPRESSÃO
+   ========================================= */
+@media print {
+    /* Esconde botões */
+    .noPrint {
+        display: none !important;
+    }
+
+    /* Remove margens para usar a folha A4 toda */
+    .container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* MODO ECONÔMICO: Transforma o Card Verde em Card com Borda */
+    .headerCard {
+        background-color: white !important;
+        color: #1E293B !important; /* Força o texto a ficar escuro */
+        border: 2px solid #2D5A27 !important;
+        box-shadow: none !important;
+        padding: 1.5rem !important;
+    }
+
+    /* Ajusta as tags para texto escuro */
+    .badge {
+        background-color: white !important;
+        color: #1E293B !important;
+        border: 1px solid #1E293B !important;
+    }
+
+    /* Força as bolinhas da timeline a manterem a cor verde */
+    .timelineDot, .itemType {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Impede que uma etapa da timeline seja cortada no meio da folha */
+    .timelineItem { 
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}

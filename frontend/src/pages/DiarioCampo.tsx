@@ -10,6 +10,7 @@ export default function DiarioCampo() {
     const [ciclos, setCiclos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [termoPesquisa, setTermoPesquisa] = useState('');
+    const [tipoFiltro, setTipoFiltro] = useState('TODOS');
 
     // Estados de Ordenação
     type OrdenacaoCampos = 'data_registo' | 'tipo' | 'cultura_nome' | 'autor_nome' | null;
@@ -188,14 +189,22 @@ export default function DiarioCampo() {
         }
     };
 
+// LÓGICA DE FILTRAGEM ATUALIZADA (Atividade + Texto)
     let registosFiltrados = registos.filter(r => {
+        // 1. Filtro por Tipo de Atividade
+        const matchTipo = tipoFiltro === 'TODOS' || r.tipo === tipoFiltro;
+
+        // 2. Filtro por Texto
         const termo = termoPesquisa.toLowerCase();
-        return (
+        const matchTexto = (
             (r.cultura_nome?.toLowerCase().includes(termo)) ||
             (r.descricao.toLowerCase().includes(termo)) ||
             (r.autor_nome?.toLowerCase().includes(termo)) ||
             (r.tipo_display?.toLowerCase().includes(termo))
         );
+
+        // O registro só aparece se passar nos dois testes
+        return matchTipo && matchTexto;
     });
 
     if (ordenacao) {
@@ -299,9 +308,32 @@ export default function DiarioCampo() {
                 {/* Histórico e Tabela */}
                 <div className={styles.card}>
                     <h2 className={styles.cardTitle}>Histórico de Operações</h2>
-                    <div className={styles.searchContainer}>
-                        <input type="text" placeholder="🔍 Pesquisar por cultura, descrição ou autor..." value={termoPesquisa} onChange={(e) => setTermoPesquisa(e.target.value)} className={styles.searchInput} />
-                    </div>
+<div className={styles.searchContainer} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        {/* NOVO: Seletor de Tipo de Atividade */}
+        <select 
+            value={tipoFiltro} 
+            onChange={(e) => setTipoFiltro(e.target.value)}
+            className={styles.searchInput} 
+            style={{ width: 'auto', minWidth: '200px' }}
+        >
+            <option value="TODOS">📋 Todas as Atividades</option>
+            <option value="OBSERVACAO">👁️ Observação</option>
+            <option value="REGA">💧 Rega / Irrigação</option>
+            <option value="INSUMO">🧪 Aplicação de Insumo</option>
+            <option value="COLHEITA">🌾 Colheita</option>
+            <option value="OUTRO">⚙️ Outra Operação</option>
+        </select>
+
+        {/* Campo de Pesquisa por Texto */}
+        <input 
+            type="text" 
+            placeholder="🔍 Pesquisar por cultura, descrição ou autor..." 
+            value={termoPesquisa} 
+            onChange={(e) => setTermoPesquisa(e.target.value)} 
+            className={styles.searchInput} 
+            style={{ flex: 1 }} 
+        />
+    </div>
 
                     {loading ? <p>Carregando diário...</p> : (
                         <div className={styles.tableWrapper}>

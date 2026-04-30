@@ -10,6 +10,7 @@ export default function Ciclos() {
     const [talhoes, setTalhoes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [termoPesquisa, setTermoPesquisa] = useState('');
+    const [statusFiltro, setStatusFiltro] = useState('TODOS');
 
     // Estado para o QR Code
     const [cicloImprimir, setCicloImprimir] = useState<any>(null);
@@ -111,13 +112,20 @@ export default function Ciclos() {
         }
     };
 
+// LÓGICA DE FILTRAGEM ATUALIZADA
     let ciclosFiltrados = ciclos.filter(c => {
+        // 1. Filtro por Status
+        const matchStatus = statusFiltro === 'TODOS' || c.status === statusFiltro;
+        
+        // 2. Filtro por Texto
         const termo = termoPesquisa.toLowerCase();
-        return (
-            (c.talhao_nome?.toLowerCase().includes(termo)) ||
+        const matchTexto = (
             (c.cultura_nome?.toLowerCase().includes(termo)) ||
-            (c.status.toLowerCase().includes(termo))
+            (c.talhao_nome?.toLowerCase().includes(termo))
         );
+
+        // Retorna verdadeiro apenas se passar nos dois critérios
+        return matchStatus && matchTexto;
     });
 
     if (ordenacao) {
@@ -194,9 +202,31 @@ export default function Ciclos() {
                 {/* Lado Direito: Tabela */}
                 <div className={styles.card}>
                     <h2 className={styles.cardTitle}>Histórico de Ciclos</h2>
-                    <div className={styles.searchContainer}>
-                        <input type="text" placeholder="🔍 Pesquisar por talhão, cultura ou status..." value={termoPesquisa} onChange={(e) => setTermoPesquisa(e.target.value)} className={styles.searchInput} />
-                    </div>
+                    <div className={styles.searchContainer} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        {/* NOVO: Seletor de Status */}
+        <select 
+            value={statusFiltro} 
+            onChange={(e) => setStatusFiltro(e.target.value)}
+            className={styles.searchInput} // Reutilizando a classe do input para manter o padrão
+            style={{ width: 'auto', minWidth: '200px' }}
+        >
+            <option value="TODOS">📋 Todos os Status</option>
+            <option value="ATIVO">🌱 Ativos</option>
+            <option value="PLANEJADO">📅 Planejados</option>
+            <option value="COLHIDO">✅ Finalizados</option>
+            <option value="CANCELADO">❌ Cancelados</option>
+        </select>
+
+        {/* Campo de Pesquisa por Texto */}
+        <input 
+            type="text" 
+            placeholder="🔍 Pesquisar por cultura ou talhão..." 
+            value={termoPesquisa} 
+            onChange={(e) => setTermoPesquisa(e.target.value)} 
+            className={styles.searchInput}
+            style={{ flex: 1 }} 
+        />
+    </div>
 
                     {loading ? <p>Carregando ciclos...</p> : (
                         <div className={styles.tableWrapper}>
@@ -308,7 +338,7 @@ export default function Ciclos() {
                     {/* A Placa em si (invisível na tela, visível apenas na folha de papel) */}
                     <div className={styles.placaPrint}>
                         <div className={styles.placaPrintInner}>
-                            <h1 style={{fontSize: '2.5rem', color: '#2D5A27', margin: '0 0 0.5rem 0'}}>IFSertaoPE - Campus Petrolina Zona Rural</h1>
+                            <h1 style={{fontSize: '2.5rem', color: '#2D5A27', margin: '0 0 0.5rem 0'}}>IFSertãoPE - Campus Petrolina Zona Rural</h1>
                             <h2 style={{fontSize: '1.5rem', margin: '0 0 2rem 0', color: '#1E293B'}}>Sistema de Rastreabilidade CampoLog</h2>
 
                             <div style={{borderBottom: '4px solid #E2E8F0', width: '80%', margin: '0 auto 3rem auto'}}></div>
@@ -321,7 +351,7 @@ export default function Ciclos() {
 
                             <p style={{fontSize: '1.5rem', color: '#475569', marginTop: '4rem', fontWeight: 'bold'}}>
                                 Escaneie com a câmera do celular para ver o histórico<br/>
-                                completo de plantio, insumos e colheitas.
+                                completo de plantio, ocorrências, manejo e colheitas.
                             </p>
                         </div>
                     </div>

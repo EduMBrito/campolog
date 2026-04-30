@@ -82,7 +82,7 @@ export default function Dashboard() {
                             <div className={`${styles.kpiIcon} ${styles.iconAmarelo}`}>📝</div>
                             <div className={styles.kpiInfo}>
                                 <span className={styles.kpiValue}>{stats.total_registros}</span>
-                                <span className={styles.kpiLabel}>Total Diário</span>
+                                <span className={styles.kpiLabel}>Diário de Campo</span>
                             </div>
                         </div>
                         <div className={styles.kpiCard}>

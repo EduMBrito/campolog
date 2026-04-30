@@ -143,3 +143,22 @@ body {
   color: #94A3B8;
   border-top: 1px solid var(--cinza-borda);
 }
+
+/* =========================================
+   CONFIGURAÇÕES GLOBAIS DE IMPRESSÃO
+   ========================================= */
+@media print {
+  /* 1. Destrava a altura da raiz do React */
+  html, body, #root, .app {
+    height: auto !important;
+    min-height: 100% !important;
+    display: block !important;
+    background-color: white !important;
+  }
+
+  /* 2. A VERDADEIRA SOLUÇÃO DAS PÁGINAS EM BRANCO: 
+        Força qualquer área com barra de rolagem a mostrar todo o conteúdo */
+  * {
+    overflow: visible !important;
+  }
+}

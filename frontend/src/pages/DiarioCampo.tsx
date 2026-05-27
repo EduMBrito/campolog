@@ -31,6 +31,7 @@ export default function Diario() {
     const [arquivoAnexo, setArquivoAnexo] = useState<File | null>(null);
     const [previewAnexo, setPreviewAnexo] = useState<string | null>(null);
     const refAnexo = useRef<HTMLInputElement>(null);
+    const formRef = useRef<HTMLFormElement>(null);
 
     // Filtro por tipo no histórico
     const [filtroTipo, setFiltroTipo] = useState('');
@@ -118,8 +119,13 @@ export default function Diario() {
         setIdEdit(reg.id);
         setCicloId(String(reg.ciclo?.id || reg.ciclo));
         setTipo(reg.tipo);
-        setDataAtividade(reg.data_atividade || reg.data_registo);
+        const dataRaw = reg.data_atividade || reg.data_registo || '';
+        setDataAtividade(dataRaw.substring(0, 10));
         setDetalhesTexto(reg.descricao || '');
+        setNomeInsumo('');
+        setArquivoAnexo(null);
+        setPreviewAnexo(null);
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     const handleExcluir = async (id: number) => {
@@ -171,7 +177,7 @@ export default function Diario() {
             <div style={{ display: 'grid', gridTemplateColumns: somenteLeitura ? '1fr' : '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>
 
                 {!somenteLeitura && (
-                <form onSubmit={handleSalvar} style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderTop: '4px solid #2D5A27' }}>
+                <form ref={formRef} onSubmit={handleSalvar} style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderTop: '4px solid #2D5A27' }}>
                     <h2>{idEdit !== null ? '✏️ Editar Apontamento' : '🌱 Registrar Atividade'}</h2>
 
                     <div style={{ marginBottom: '1.2rem', marginTop: '1.5rem' }}>

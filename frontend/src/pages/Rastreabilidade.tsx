@@ -5,6 +5,15 @@ import styles from './Rastreabilidade.module.css';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
+const TIPO_CORES: Record<string, { bg: string; color: string; dot: string }> = {
+    REGA:      { bg: '#DBEAFE', color: '#1E40AF', dot: '#3B82F6' },
+    INSUMO:    { bg: '#E8F5E9', color: '#2D5A27', dot: '#2D5A27' },
+    OBSERVACAO:{ bg: '#FFF3E0', color: '#E65100', dot: '#F59E0B' },
+    COLHEITA:  { bg: '#F3E8FF', color: '#6B21A8', dot: '#8B5CF6' },
+    OUTRO:     { bg: '#F1F5F9', color: '#475569', dot: '#64748B' },
+};
+const getTipoCores = (tipo: string) => TIPO_CORES[tipo] ?? TIPO_CORES.OUTRO;
+
 export default function Rastreabilidade() {
     const { id } = useParams<{ id: string }>();
     const [ciclo, setCiclo] = useState<any>(null);
@@ -126,13 +135,15 @@ export default function Rastreabilidade() {
 
                 {ciclo.registos && ciclo.registos.length > 0 ? (
                     <div className={styles.timeline}>
-                        {ciclo.registos.map((reg: any) => (
+                        {[...ciclo.registos].reverse().map((reg: any) => {
+                            const cores = getTipoCores(reg.tipo);
+                            return (
                             <div key={reg.id} className={styles.timelineItem}>
-                                <div className={styles.timelineDot}></div>
+                                <div className={styles.timelineDot} style={{ backgroundColor: cores.dot }}></div>
                                 <div className={styles.timelineContent}>
                                     <div className={styles.itemHeader}>
                                         <span className={styles.itemDate}>{new Date(reg.data_registo).toLocaleDateString('pt-BR')}</span>
-                                        <span className={styles.itemType}>{reg.tipo_display}</span>
+                                        <span className={styles.itemType} style={{ backgroundColor: cores.bg, color: cores.color, border: 'none' }}>{reg.tipo_display}</span>
                                     </div>
                                     <p className={styles.itemDescription}>{reg.descricao}</p>
                                     
@@ -152,7 +163,8 @@ export default function Rastreabilidade() {
                                     <div className={styles.itemAuthor}>Registrado por: {reg.autor_nome}</div>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <p style={{ color: '#64748B', textAlign: 'center', padding: '2rem', border: '1px dashed #E2E8F0', borderRadius: '8px' }}>

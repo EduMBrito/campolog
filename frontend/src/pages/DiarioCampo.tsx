@@ -1,164 +1,135 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { cadernoService } from '../services/cadernoService';
-import { agronomiaService } from '../services/agronomiaService';
+import api from '../services/api';
+import { AuthContext } from '../contexts/AuthContext';
 import styles from './DiarioCampo.module.css';
-import { offlineQueue } from '../utils/offlineQueue';
 
-export default function DiarioCampo() {
-    const [registos, setRegistos] = useState<any[]>([]);
-    const [ciclos, setCiclos] = useState<any[]>([]);
+export default function Diario() {
+    // Multi-tenant: Monitora a unidade de trabalho ativa
+    const { unidadeAtiva } = useContext(AuthContext);
+
+    // Estados de carregamento e listagem
+    const [registros, setRegistros] = useState<any[]>([]);
+    const [ciclosOpcoes, setCiclosOpcoes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [termoPesquisa, setTermoPesquisa] = useState('');
-    const [tipoFiltro, setTipoFiltro] = useState('TODOS');
 
-    // Estados de Ordenação
-    type OrdenacaoCampos = 'data_registo' | 'tipo' | 'cultura_nome' | 'autor_nome' | null;
-    const [ordenacao, setOrdenacao] = useState<OrdenacaoCampos>('data_registo');
-    const [direcaoOrdenacao, setDirecaoOrdenacao] = useState<'asc' | 'desc'>('desc'); 
-
-    // Estados do Formulário
+    // 🟢 CORREÇÃO 1: Estados do Formulário mapeados 100% com o TIPO_CHOICES do Django
     const [idEdit, setIdEdit] = useState<number | null>(null);
     const [cicloId, setCicloId] = useState('');
-    const [tipo, setTipo] = useState('OBSERVACAO');
-    const [descricao, setDescricao] = useState('');
-    const [quantidade, setQuantidade] = useState('');
-    
-    // Novos Estados para o Upload de Arquivo
-    const [arquivo, setArquivo] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [tipo, setTipo] = useState('REGA'); // Inicia com 'REGA' que é uma escolha válida
+    const [dataAtividade, setDataAtividade] = useState(new Date().toISOString().split('T')[0]);
+    const [detalhesTexto, setDetalhesTexto] = useState('');
 
-    const cicloInputRef = useRef<HTMLSelectElement>(null);
-    const arquivoInputRef = useRef<HTMLInputElement>(null); // Referência para limpar o input de arquivo
+    // Campos auxiliares para estruturação automática da descrição agronômica (Normas BPA)
+    const [estadioFenologico, setEstadioFenologico] = useState('CRESCIMENTO');
+    const [severidadePraga, setSeveridadePraga] = useState('BAIXA');
+    const [nomeInsumo, setNomeInsumo] = useState('');
 
-    const carregarDados = async () => {
+    // Anexo de mídia
+    const [arquivoAnexo, setArquivoAnexo] = useState<File | null>(null);
+    const [previewAnexo, setPreviewAnexo] = useState<string | null>(null);
+    const refAnexo = useRef<HTMLInputElement>(null);
+
+    // Filtro por tipo no histórico
+    const [filtroTipo, setFiltroTipo] = useState('');
+
+    // Monitora a troca de Campus para atualizar os dados em tempo de execução
+    useEffect(() => {
+        if (unidadeAtiva) {
+            carregarCiclosDoCampus();
+            carregarRegistrosDoDiario();
+        }
+    }, [unidadeAtiva]);
+
+    const carregarCiclosDoCampus = async () => {
         try {
-            const [resRegistos, resCiclos] = await Promise.all([
-                cadernoService.getRegistos(),
-                agronomiaService.getCiclos()
-            ]);
-            
-            // 1. Atualiza a tela com os dados novos do servidor
-            setRegistos(resRegistos.data);
-            setCiclos(resCiclos.data);
+            const response = await api.get('/agronomia/ciclos/');
+            setCiclosOpcoes(response.data);
+        } catch (error) {
+            console.error("Erro ao carregar ciclos para o seletor:", error);
+        }
+    };
 
-            // 2. MÁGICA OFFLINE: Guarda uma cópia de segurança na memória do celular
-            localStorage.setItem('campolog_cache_ciclos', JSON.stringify(resCiclos.data));
-            localStorage.setItem('campolog_cache_registos', JSON.stringify(resRegistos.data));
-
-        } catch (error: any) {
-            // 3. Se deu erro de rede (offline), puxa a cópia de segurança!
-            if (!navigator.onLine || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-                console.log("Modo Offline ativado: Carregando opções da memória interna.");
-                
-                const ciclosCache = localStorage.getItem('campolog_cache_ciclos');
-                const registosCache = localStorage.getItem('campolog_cache_registos');
-
-                if (ciclosCache) setCiclos(JSON.parse(ciclosCache));
-                if (registosCache) setRegistos(JSON.parse(registosCache));
-            } else {
-                console.error("Erro ao carregar dados:", error);
-            }
+    const carregarRegistrosDoDiario = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/caderno/diario/');
+            setRegistros(response.data);
+        } catch (error) {
+            console.error("Erro ao carregar lançamentos do diário:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { carregarDados(); }, []);
-
-    // Função que captura a escolha do arquivo e gera a miniatura (Preview)
     const handleArquivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            setArquivo(file);
-            setPreviewUrl(URL.createObjectURL(file)); // Gera uma URL local temporária para visualizar a foto
+        const file = e.target.files?.[0] || null;
+        setArquivoAnexo(file);
+        if (file && file.type.startsWith('image/')) {
+            setPreviewAnexo(URL.createObjectURL(file));
+        } else {
+            setPreviewAnexo(null);
         }
-    };
-
-// Função auxiliar que transforma o Arquivo Físico num Texto Gigante (Base64)
-    const converterParaBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
     };
 
     const handleSalvar = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('ciclo', cicloId);
-        formData.append('tipo', tipo);
-        formData.append('descricao', descricao);
-        if (quantidade) formData.append('quantidade', quantidade);
-        
-        if (arquivo) {
-            formData.append('anexo', arquivo);
-        }
-
         try {
-            if (idEdit) {
-                await cadernoService.updateRegisto(idEdit, formData);
-            } else {
-                await cadernoService.createRegisto(formData);
+            let descricaoCompilada = detalhesTexto;
+            if (tipo === 'OBSERVACAO') {
+                descricaoCompilada = `[Estado: ${estadioFenologico}] [Severidade Praga: ${severidadePraga}] ${detalhesTexto}`;
+            } else if (tipo === 'INSUMO' && nomeInsumo) {
+                descricaoCompilada = `[Produto/Insumo: ${nomeInsumo}] ${detalhesTexto}`;
             }
-            limparFormulario();
-            carregarDados();
-            alert("Registro salvo com sucesso!");
-        } catch (error: any) {
-            if (!navigator.onLine || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-                
-                // MÁGICA DA FOTO OFFLINE
-                let fotoBase64 = null;
-                if (arquivo) {
-                    try {
-                        fotoBase64 = await converterParaBase64(arquivo);
-                    } catch (err) {
-                        console.error("Erro ao converter imagem", err);
-                    }
-                }
 
-                const dadosParaSalvar = {
-                    ciclo: cicloId,
-                    tipo: tipo,
-                    descricao: descricao,
-                    quantidade: quantidade,
-                    fotoBase64: fotoBase64 // Guardamos o texto da imagem aqui!
-                };
-                
-                offlineQueue.salvar(dadosParaSalvar);
-                alert('📡 Você está offline! Seu registro (com a foto) foi salvo no aparelho e será enviado automaticamente quando a internet voltar.');
-                limparFormulario();
+            if (arquivoAnexo) {
+                const formData = new FormData();
+                formData.append('ciclo', String(Number(cicloId)));
+                formData.append('tipo', tipo);
+                formData.append('descricao', descricaoCompilada.trim());
+                formData.append('anexo', arquivoAnexo);
+                const cfg = { headers: { 'Content-Type': 'multipart/form-data' } };
+                if (idEdit !== null) {
+                    await api.patch(`/caderno/diario/${idEdit}/`, formData, cfg);
+                } else {
+                    await api.post('/caderno/diario/', formData, cfg);
+                }
             } else {
-                console.error(error);
-                alert("Erro ao salvar o registro. Verifique os campos e o tamanho do arquivo.");
+                const payload = { ciclo: Number(cicloId), tipo, descricao: descricaoCompilada.trim() };
+                if (idEdit !== null) {
+                    await api.patch(`/caderno/diario/${idEdit}/`, payload);
+                } else {
+                    await api.post('/caderno/diario/', payload);
+                }
             }
+
+            alert(idEdit !== null ? 'Registro atualizado com sucesso!' : 'Atividade registrada com sucesso!');
+            limparFormulario();
+            carregarRegistrosDoDiario();
+        } catch (error: any) {
+            console.error('Erro ao salvar no diário:', error.response?.data || error.message);
+            alert('Erro ao salvar lançamento. Verifique os dados inseridos.');
         }
     };
 
-    const handleEditar = (registo: any) => {
-        setIdEdit(registo.id);
-        setCicloId(registo.ciclo.toString());
-        setTipo(registo.tipo);
-        setDescricao(registo.descricao);
-        setQuantidade(registo.quantidade || '');
-        
-        // Limpa o arquivo físico pendente, mas mostra a foto que já vem do banco de dados (se houver)
-        setArquivo(null);
-        setPreviewUrl(registo.anexo || null); 
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    const handleEditar = (reg: any) => {
+        setIdEdit(reg.id);
+        setCicloId(String(reg.ciclo?.id || reg.ciclo));
+        setTipo(reg.tipo);
+        setDataAtividade(reg.data_atividade || reg.data_registo);
+        setDetalhesTexto(reg.descricao || '');
     };
 
     const handleExcluir = async (id: number) => {
-        if (window.confirm(`Atenção! Deseja apagar definitivamente este registro?`)) {
+        if (window.confirm('Deseja realmente apagar este registro do diário de campo?')) {
             try {
-                await cadernoService.deleteRegisto(id);
-                carregarDados();
+                await api.delete(`/caderno/diario/${id}/`);
+                alert('Registro removido.');
+                carregarRegistrosDoDiario();
             } catch (error) {
-                alert("Erro ao apagar o registro.");
+                console.error('Erro ao remover do diário:', error);
+                alert('Não foi possível excluir o registro.');
             }
         }
     };
@@ -166,229 +137,240 @@ export default function DiarioCampo() {
     const limparFormulario = () => {
         setIdEdit(null);
         setCicloId('');
-        setTipo('OBSERVACAO');
-        setDescricao('');
-        setQuantidade('');
-        
-        // Limpar estados do arquivo
-        setArquivo(null);
-        setPreviewUrl(null);
-        if (arquivoInputRef.current) {
-            arquivoInputRef.current.value = ''; // Reseta o texto "Nenhum arquivo selecionado"
-        }
-        
-        cicloInputRef.current?.focus();
+        setTipo('REGA');
+        setDataAtividade(new Date().toISOString().split('T')[0]);
+        setDetalhesTexto('');
+        setNomeInsumo('');
+        setArquivoAnexo(null);
+        setPreviewAnexo(null);
+        if (refAnexo.current) refAnexo.current.value = '';
     };
 
-    const handleSort = (campo: OrdenacaoCampos) => {
-        if (ordenacao === campo) {
-            setDirecaoOrdenacao(direcaoOrdenacao === 'asc' ? 'desc' : 'asc');
-        } else {
-            setOrdenacao(campo);
-            setDirecaoOrdenacao('asc');
-        }
-    };
-
-// LÓGICA DE FILTRAGEM ATUALIZADA (Atividade + Texto)
-    let registosFiltrados = registos.filter(r => {
-        // 1. Filtro por Tipo de Atividade
-        const matchTipo = tipoFiltro === 'TODOS' || r.tipo === tipoFiltro;
-
-        // 2. Filtro por Texto
-        const termo = termoPesquisa.toLowerCase();
-        const matchTexto = (
-            (r.cultura_nome?.toLowerCase().includes(termo)) ||
-            (r.descricao.toLowerCase().includes(termo)) ||
-            (r.autor_nome?.toLowerCase().includes(termo)) ||
-            (r.tipo_display?.toLowerCase().includes(termo))
-        );
-
-        // O registro só aparece se passar nos dois testes
-        return matchTipo && matchTexto;
-    });
-
-    if (ordenacao) {
-        registosFiltrados.sort((a, b) => {
-            const valorA = a[ordenacao];
-            const valorB = b[ordenacao];
-            if (valorA < valorB) return direcaoOrdenacao === 'asc' ? -1 : 1;
-            if (valorA > valorB) return direcaoOrdenacao === 'asc' ? 1 : -1;
-            return 0;
+    const registrosFiltrados = registros
+        .filter(reg => filtroTipo === '' || reg.tipo === filtroTipo)
+        .filter(reg => {
+            if (termoPesquisa === '') return true;
+            const busca = termoPesquisa.toLowerCase();
+            const texto = reg.descricao?.toLowerCase() || '';
+            const cultura = (reg.cultura_nome || reg.ciclo_detalhes?.cultura || '').toLowerCase();
+            const talhao = (reg.talhao_nome || reg.ciclo_detalhes?.talhao || '').toLowerCase();
+            return texto.includes(busca) || cultura.includes(busca) || talhao.includes(busca);
         });
-    }
-
-    const renderSortIcon = (campo: OrdenacaoCampos) => {
-        if (ordenacao !== campo) return null;
-        return <span className={styles.sortIcon}>{direcaoOrdenacao === 'asc' ? '▲' : '▼'}</span>;
-    };
 
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <Link to="/" style={{ color: '#64748B', textDecoration: 'none', fontWeight: 'bold', display: 'inline-block', marginBottom: '1rem' }}>
-                    &larr; Voltar para o Painel
-                </Link>
-                <h1 className={styles.title}>Diário de Campo</h1>
-                <p style={{ color: '#64748B', marginTop: 0 }}>Registro diário de atividades, aplicações e colheitas com suporte a fotos.</p>
+        <div className={styles.container || ''} style={{ padding: '2rem', maxWidth: '1300px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div>
+                    <h1 style={{ color: '#1E293B', fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>Diário de Intervenções e Ocorrências</h1>
+                    <p style={{ color: '#64748B', fontSize: '0.9rem', marginTop: '0.3rem' }}>Caderno de campo digitalizado integrado à governança técnica do campus.</p>
+                </div>
+                <Link to="/" style={{ color: '#2D5A27', fontWeight: 'bold', textDecoration: 'none' }}>&larr; Voltar ao Painel</Link>
             </div>
 
-            <div className={styles.grid}>
-                {/* Formulário de Lançamento */}
-                <div className={styles.card}>
-                    <h2 className={styles.cardTitle}>{idEdit ? 'Editar Registro' : 'Novo Lançamento'}</h2>
-                    <form onSubmit={handleSalvar}>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Onde foi realizado? (Ciclo) *</label>
-                            <select ref={cicloInputRef} className={styles.select} value={cicloId} onChange={e => setCicloId(e.target.value)} required>
-                                <option value="">Selecione o plantio...</option>
-                                {ciclos.map(c => <option key={c.id} value={c.id}>{c.cultura_nome} ({c.talhao_nome})</option>)}
-                            </select>
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Tipo de Atividade *</label>
-                            <select className={styles.select} value={tipo} onChange={e => setTipo(e.target.value)} required>
-                                <option value="OBSERVACAO">Observação (Pragas, Crescimento)</option>
-                                <option value="REGA">Rega / Irrigação</option>
-                                <option value="INSUMO">Aplicação de Insumo / Adubo</option>
-                                <option value="COLHEITA">Colheita</option>
-                                <option value="OUTRO">Outra Operação</option>
-                            </select>
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Detalhes / Observações *</label>
-                            <textarea 
-                                className={styles.textarea} 
-                                value={descricao} 
-                                onChange={e => setDescricao(e.target.value)} 
-                                placeholder="Descreva o que foi feito ou observado..."
-                                required 
-                            />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Quantidade (Opcional)</label>
-                            <input 
-                                className={styles.input} 
-                                value={quantidade} 
-                                onChange={e => setQuantidade(e.target.value)} 
-                                placeholder="Ex: 50L de água, 2kg de adubo, 10kg colhidos"
-                            />
-                        </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>
+                
+                {/* 📝 FORMULÁRIO DE LANÇAMENTO */}
+                <form onSubmit={handleSalvar} style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderTop: '4px solid #2D5A27' }}>
+                    <h2>{idEdit !== null ? '✏️ Editar Apontamento' : '🌱 Registrar Atividade'}</h2>
 
-                        {/* NOVO CAMPO: Upload de Arquivo/Foto */}
-                        <div className={styles.formGroup} style={{ backgroundColor: '#F8FAFC', padding: '1rem', borderRadius: '6px', border: '1px dashed #E2E8F0' }}>
-                            <label className={styles.label}>Anexar Foto ou Arquivo (Opcional)</label>
-                            <input 
-                                type="file" 
-                                ref={arquivoInputRef}
-                                accept="image/*,video/*,.pdf" 
-                                onChange={handleArquivoChange} 
-                                style={{ width: '100%', marginBottom: previewUrl ? '1rem' : '0' }}
-                            />
-                            
-                            {/* Pré-visualização da imagem */}
-                            {previewUrl && (
-                                <div style={{ textAlign: 'center' }}>
-                                    <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '0 0 0.5rem 0' }}>Pré-visualização do Anexo:</p>
-                                    <img 
-                                        src={previewUrl} 
-                                        alt="Preview" 
-                                        style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '6px', objectFit: 'cover' }} 
-                                    />
-                                </div>
-                            )}
+                    <div style={{ marginBottom: '1.2rem', marginTop: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', color: '#1E293B' }}>Vincular ao Lote / Cultura Ativa</label>
+                        <select value={cicloId} onChange={(e) => setCicloId(e.target.value)} required style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '4px', border: '1px solid #E2E8F0', background: '#ffffff' }}>
+                            <option value="">Selecione o plantio alvo...</option>
+                            {ciclosOpcoes.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.cultura_nome || c.cultura?.nome} — {c.talhao_nome || c.talhao?.nome}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.2rem' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', color: '#1E293B' }}>Data do Manejo</label>
+                            <input type="date" value={dataAtividade} onChange={(e) => setDataAtividade(e.target.value)} required style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '4px', border: '1px solid #E2E8F0' }} />
                         </div>
-                        
-                        <button type="submit" className={styles.button}>
-                            {idEdit ? 'Salvar Alterações' : 'Salvar Registro'}
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', color: '#1E293B' }}>Natureza do Registro</label>
+                            {/* 🟢 CORREÇÃO 3: Options do seletor alinhadas exatamente com as chaves do Django choices */}
+                            <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '4px', border: '1px solid #E2E8F0', background: '#ffffff' }}>
+                                <option value="REGA">💧 Rega / Irrigação</option>
+                                <option value="INSUMO">🧪 Aplicação de Insumo / Adubo</option>
+                                <option value="OBSERVACAO">👁️ Observação (Pragas, Doenças, Fenologia)</option>
+                                <option value="COLHEITA">📦 Colheita</option>
+                                <option value="OUTRO">⚙️ Outra Operação</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* 🧪 SUB-CAMPO DINÂMICO SE FOR INSUMO */}
+                    {tipo === 'INSUMO' && (
+                        <div style={{ marginBottom: '1.2rem', padding: '1rem', background: '#F8FAFC', borderRadius: '6px', borderLeft: '4px solid #2D5A27' }}>
+                            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', color: '#1E293B', fontSize: '0.9rem' }}>Identificação do Insumo / Fertilizante</label>
+                            <input 
+                                type="text"
+                                value={nomeInsumo}
+                                onChange={(e) => setNomeInsumo(e.target.value)}
+                                placeholder="Ex: NPK 10-10-10, Esterco Bovino, Sulfato de Cobre..."
+                                required
+                                style={{ width: '100%', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                            />
+                        </div>
+                    )}
+
+                    {/* 👁️ SUB-CAMPOS DINÂMICOS SE FOR OBSERVAÇÃO */}
+                    {tipo === 'OBSERVACAO' && (
+                        <div style={{ marginBottom: '1.2rem', padding: '1rem', background: '#FFFBEB', borderRadius: '6px', borderLeft: '4px solid #F59E0B', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', color: '#1E293B', fontSize: '0.9rem' }}>Estado Fenológico</label>
+                                <select value={estadioFenologico} onChange={(e) => setEstadioFenologico(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#ffffff' }}>
+                                    <option value="EMERGENCIA">Emergência</option>
+                                    <option value="CRESCIMENTO">Crescimento Vegetativo</option>
+                                    <option value="FLORACAO">Floração</option>
+                                    <option value="FRUTIFICACAO">Frutificação</option>
+                                    <option value="MATURACAO">Maturação / Secagem</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', color: '#1E293B', fontSize: '0.9rem' }}>Severidade de Incidências</label>
+                                <select value={severidadePraga} onChange={(e) => setSeveridadePraga(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#ffffff' }}>
+                                    <option value="NENHUMA">Nenhuma / Sob Controle</option>
+                                    <option value="BAIXA">Baixa (Sintomas leves)</option>
+                                    <option value="MEDIA">Média (Alerta de monitoramento)</option>
+                                    <option value="CRITICA">🚨 Alta / Urgência Fitossanitária</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', color: '#1E293B' }}>Descrição Detalhada da Operação</label>
+                        <textarea rows={4} value={detalhesTexto} onChange={(e) => setDetalhesTexto(e.target.value)} placeholder="Descreva dosagens, volume de calda, quantidade colhida ou anomalias observadas no lote..." required style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '4px', border: '1px solid #E2E8F0', fontFamily: 'inherit', resize: 'vertical' }} />
+                    </div>
+
+                    {/* ANEXAR MÍDIA */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#1E293B' }}>Anexar Mídia (opcional)</label>
+
+                        <input ref={refAnexo} type="file" accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }} onChange={handleArquivoChange} />
+                        <button type="button" onClick={() => refAnexo.current?.click()} style={{ padding: '0.5rem 0.9rem', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#1E293B' }}>
+                            📎 Selecionar Arquivo
                         </button>
-                        {idEdit && <button type="button" onClick={limparFormulario} className={styles.button} style={{ backgroundColor: '#64748B', marginTop: '0.5rem' }}>Cancelar</button>}
-                    </form>
-                </div>
 
-                {/* Histórico e Tabela */}
-                <div className={styles.card}>
-                    <h2 className={styles.cardTitle}>Histórico de Operações</h2>
-<div className={styles.searchContainer} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        {/* NOVO: Seletor de Tipo de Atividade */}
-        <select 
-            value={tipoFiltro} 
-            onChange={(e) => setTipoFiltro(e.target.value)}
-            className={styles.searchInput} 
-            style={{ width: 'auto', minWidth: '200px' }}
-        >
-            <option value="TODOS">📋 Todas as Atividades</option>
-            <option value="OBSERVACAO">👁️ Observação</option>
-            <option value="REGA">💧 Rega / Irrigação</option>
-            <option value="INSUMO">🧪 Aplicação de Insumo</option>
-            <option value="COLHEITA">🌾 Colheita</option>
-            <option value="OUTRO">⚙️ Outra Operação</option>
-        </select>
+                        {arquivoAnexo && (
+                            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.9rem', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {previewAnexo && (
+                                    <img src={previewAnexo} alt="preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                                )}
+                                <span style={{ fontSize: '0.85rem', color: '#334155', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {arquivoAnexo.name}
+                                </span>
+                                <button type="button" onClick={() => { setArquivoAnexo(null); setPreviewAnexo(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0 }}>
+                                    ✕
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
-        {/* Campo de Pesquisa por Texto */}
-        <input 
-            type="text" 
-            placeholder="🔍 Pesquisar por cultura, descrição ou autor..." 
-            value={termoPesquisa} 
-            onChange={(e) => setTermoPesquisa(e.target.value)} 
-            className={styles.searchInput} 
-            style={{ flex: 1 }} 
-        />
-    </div>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button type="submit" style={{ padding: '0.6rem 1.5rem', backgroundColor: '#2D5A27', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                            {idEdit !== null ? 'Atualizar Lançamento' : 'Gravar no Diário'}
+                        </button>
+                        {idEdit !== null && (
+                            <button type="button" onClick={limparFormulario} style={{ padding: '0.6rem 1.5rem', backgroundColor: '#64748B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                Cancelar
+                            </button>
+                        )}
+                    </div>
+                </form>
 
-                    {loading ? <p>Carregando diário...</p> : (
-                        <div className={styles.tableWrapper}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th className={styles.sortableHeader} onClick={() => handleSort('data_registo')}>Data {renderSortIcon('data_registo')}</th>
-                                        <th className={styles.sortableHeader} onClick={() => handleSort('tipo')}>Atividade {renderSortIcon('tipo')}</th>
-                                        <th className={styles.sortableHeader} onClick={() => handleSort('cultura_nome')}>Plantio {renderSortIcon('cultura_nome')}</th>
-                                        <th>Detalhes</th>
-                                        <th className={styles.sortableHeader} onClick={() => handleSort('autor_nome')}>Autor {renderSortIcon('autor_nome')}</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {registosFiltrados.length === 0 ? (
-                                        <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#64748B' }}>Nenhum registro encontrado.</td></tr>
-                                    ) : (
-                                        registosFiltrados.map(r => (
-                                            <tr key={r.id}>
-                                                <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                                                    {new Date(r.data_registo).toLocaleDateString('pt-BR')}
-                                                </td>
-                                                <td>
-                                                    <span className={`${styles.badge} ${styles['tipo_' + r.tipo.toLowerCase()]}`}>
-                                                        {r.tipo_display}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <strong>{r.cultura_nome}</strong>
-                                                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{r.talhao_nome}</div>
-                                                </td>
-                                                <td style={{ maxWidth: '250px' }}>
-                                                    <div style={{ fontSize: '0.875rem' }}>{r.descricao}</div>
-                                                    {r.quantidade && <div style={{ fontSize: '0.8rem', color: '#2D5A27', marginTop: '4px', fontWeight: 'bold' }}>Qtd: {r.quantidade}</div>}
-                                                    
-                                                    {/* NOVO: Link para ver o anexo se existir */}
-                                                    {r.anexo && (
-                                                        <div style={{ marginTop: '8px' }}>
-                                                            <a href={r.anexo} target="_blank" rel="noopener noreferrer" style={{ color: '#2D5A27', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                📎 Ver Anexo/Foto
-                                                            </a>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td style={{ fontSize: '0.85rem' }}>{r.autor_nome}</td>
-                                                <td>
-                                                    <button type="button" onClick={() => handleEditar(r)} className={`${styles.actionButton} ${styles.editBtn}`}>Editar</button>
-                                                    <button type="button" onClick={() => handleExcluir(r.id)} className={`${styles.actionButton} ${styles.deleteBtn}`}>Excluir</button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                {/* 📊 LINHA DO TEMPO (HISTÓRICO) */}
+                <div style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <h2 style={{ fontSize: '1.25rem', color: '#1E293B', margin: '0 0 0.9rem 0' }}>Histórico de Lançamentos</h2>
+                        <div style={{ display: 'flex', gap: '0.6rem' }}>
+                            <select
+                                value={filtroTipo}
+                                onChange={(e) => setFiltroTipo(e.target.value)}
+                                style={{ padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '0.9rem', background: '#ffffff', flexShrink: 0 }}
+                            >
+                                <option value="">Todos os Tipos</option>
+                                <option value="REGA">💧 Rega / Irrigação</option>
+                                <option value="INSUMO">🧪 Aplicação de Insumo</option>
+                                <option value="OBSERVACAO">👁️ Observação</option>
+                                <option value="COLHEITA">📦 Colheita</option>
+                                <option value="OUTRO">⚙️ Outro</option>
+                            </select>
+                            <input
+                                type="text"
+                                placeholder="🔍 Filtrar histórico..."
+                                value={termoPesquisa}
+                                onChange={(e) => setTermoPesquisa(e.target.value)}
+                                style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '0.9rem', flex: 1 }}
+                            />
+                        </div>
+                    </div>
+
+                    {loading ? <p style={{ color: '#64748B' }}>A buscar diário de campo do campus...</p> : registrosFiltrados.length === 0 ? (
+                        <p style={{ textAlign: 'center', padding: '2rem', color: '#64748B' }}>Nenhum lançamento registrado para esta unidade.</p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '600px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                            {registrosFiltrados.map((reg) => {
+                                // 🟢 CORREÇÃO 4: Estilização dinâmica dos Badges baseada nos tipos oficiais do banco
+                                const tipoOficial = reg.tipo || '';
+                                const isOcorr = tipoOficial === 'OBSERVACAO';
+                                const isRega = tipoOficial === 'REGA';
+                                const isInsumo = tipoOficial === 'INSUMO';
+                                const isColheita = tipoOficial === 'COLHEITA';
+
+                                return (
+                                    <div key={reg.id} style={{ padding: '1.2rem', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#ffffff', borderLeft: isOcorr ? '5px solid #F59E0B' : isRega ? '5px solid #3B82F6' : isInsumo ? '5px solid #2D5A27' : isColheita ? '5px solid #8B5CF6' : '5px solid #64748B', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.6rem' }}>
+                                            <div>
+                                                <span style={{ fontWeight: 'bold', color: '#1E293B', fontSize: '1.05rem' }}>
+                                                    {reg.cultura_nome || `Cultivo #${reg.ciccode || reg.ciclo}`}
+                                                </span>
+                                                <span style={{ fontSize: '0.8rem', color: '#64748B', marginLeft: '0.5rem' }}>
+                                                    📍 Lote: {reg.talhao_nome || 'Área Geral'}
+                                                </span>
+                                            </div>
+                                            <span style={{ 
+                                                fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 'bold', 
+                                                backgroundColor: isOcorr ? '#FFF3E0' : isRega ? '#DBEAFE' : isInsumo ? '#E8F5E9' : isColheita ? '#F3E8FF' : '#F1F5F9', 
+                                                color: isOcorr ? '#E65100' : isRega ? '#1E40AF' : isInsumo ? '#2D5A27' : isColheita ? '#6B21A8' : '#475569' 
+                                            }}>
+                                                {isOcorr ? '👁️ OBSERVACAO' : isRega ? '💧 REGA' : isInsumo ? '🧪 INSUMO' : isColheita ? '📦 COLHEITA' : '⚙️ OUTRO'}
+                                            </span>
+                                        </div>
+
+                                        <p style={{ color: '#334155', fontSize: '0.925rem', margin: '0 0 0.8rem 0', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                                            {reg.descricao}
+                                        </p>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #E2E8F0', paddingTop: '0.6rem' }}>
+                                            <small style={{ color: '#94A3B8' }}>
+                                                📅 Atividade: {new Date(reg.data_atividade || reg.data_registo).toLocaleDateString('pt-BR')} {reg.autor_nome ? `• Por: ${reg.autor_nome}` : ''}
+                                            </small>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => handleEditar(reg)} 
+                                                        style={{ padding: '0.3rem 0.6rem', backgroundColor: '#1E293B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => handleExcluir(reg.id)} 
+                                                        style={{ padding: '0.3rem 0.6rem', backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                                                    >
+                                                        Excluir
+                                                    </button>
+                                                </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

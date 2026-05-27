@@ -174,6 +174,9 @@ const carregarMetricasAnaliticas = async () => {
                         {user?.role === 'ADMIN' && (
                             <Link to="/usuarios" style={{ display: 'block', padding: '0.75rem 1rem', background: '#F8FAFC', color: '#1E293B', textDecoration: 'none', borderRadius: '4px', fontWeight: '600', border: '1px solid #E2E8F0' }}>👥 Gestão de Usuários</Link>
                         )}
+                        {user?.role === 'ADMIN' && (
+                            <Link to="/unidades" style={{ display: 'block', padding: '0.75rem 1rem', background: '#F8FAFC', color: '#1E293B', textDecoration: 'none', borderRadius: '4px', fontWeight: '600', border: '1px solid #E2E8F0' }}>🏢 Unidades Produtivas</Link>
+                        )}
                         <Link to="/culturas" style={{ display: 'block', padding: '0.75rem 1rem', background: '#F8FAFC', color: '#1E293B', textDecoration: 'none', borderRadius: '4px', fontWeight: '600', border: '1px solid #E2E8F0' }}>🍇 Biblioteca Global de Culturas</Link>
                         <Link to="/talhoes" style={{ display: 'block', padding: '0.75rem 1rem', background: '#F8FAFC', color: '#1E293B', textDecoration: 'none', borderRadius: '4px', fontWeight: '600', border: '1px solid #E2E8F0' }}>🗺️ Parcelas e Talhões</Link>
                         <Link to="/ciclos" style={{ display: 'block', padding: '0.75rem 1rem', background: '#F8FAFC', color: '#1E293B', textDecoration: 'none', borderRadius: '4px', fontWeight: '600', border: '1px solid #E2E8F0' }}>⏳ Ciclos de Cultivo</Link>

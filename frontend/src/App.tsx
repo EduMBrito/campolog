@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthContext } from './contexts/AuthContext';
 import { offlineQueue } from './utils/offlineQueue';
 import { useEffect, useContext } from 'react';
+
 // Importação das nossas Páginas e Componentes
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,55 +13,56 @@ import Talhoes from './pages/Talhoes';
 import Ciclos from './pages/Ciclos';
 import DiarioCampo from './pages/DiarioCampo';
 import Rastreabilidade from './pages/Rastreabilidade';
-
+import SelecionarUnidade from './pages/SelecionarUnidade';
+import Unidades from './pages/Unidades'; // ➡️ Garanta que importou corretamente aqui
 
 function AppRoutes() {
     const { user } = useContext(AuthContext);
 
     return (
         <Routes>
-            {/* ROTA PÚBLICA: Se o usuário já estiver logado e tentar ir pro /login, joga ele pro Dashboard */}
+            {/* ROTA PÚBLICA: Se o utilizador já estiver logado, vai para a raiz */}
             <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
             <Route path="/rastreabilidade/:id" element={<Rastreabilidade />} />
             
-            {/* ROTAS PROTEGIDAS: Tudo que estiver aqui dentro passa pelo nosso Guarda de Segurança */}
+            {/* ROTAS PROTEGIDAS POR LOGIN: Tudo aqui dentro exige que o utilizador tenha sessão ativa */}
             <Route element={<ProtectedRoute />}>
+                
+                {/* 1. O ecrã de seleção de unidade: Exige apenas LOGIN, não exige unidade ativa */}
+                <Route path="/selecionar-unidade" element={<SelecionarUnidade />} />
+                
+                {/* 2. O Painel Principal (Raiz): A validação da Unidade Ativa ocorre dentro do próprio Dashboard */}
                 <Route path="/" element={<Dashboard />} />
                 
-                {/* Futura tela de Usuários: Apenas ADMIN poderá acessar! */}
+                {/* Rotas exclusivas para ADMIN */}
                 <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                     <Route path="/usuarios" element={<UsuariosAdmin />} />
+                    <Route path="/unidades" element={<Unidades />} />
+                </Route>
                 
-                {/* Rotas do Módulo 2 */}
+                {/* Outras rotas do sistema móvel */}
                 <Route path="/culturas" element={<Culturas />} />
                 <Route path="/talhoes" element={<Talhoes />} />
                 <Route path="/ciclos" element={<Ciclos />} />
-
-                {/* Rotas do Módulo 3 */}
                 <Route path="/diario" element={<DiarioCampo />} />
-                </Route> */
             </Route>
 
-            
-            {/* ROTA CORINGA: Digitou uma URL que não existe? Manda pro Início */}
+            {/* ROTA CORINGA: Redireciona qualquer URL inválida para o início */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 }
 
 export default function App() {
-    // Gatilho que observa a internet do dispositivo
+    // Gatilho que observa a internet do dispositivo para o PWA
     useEffect(() => {
-    // Tenta sincronizar assim que o sistema abre
-    offlineQueue.sincronizarPendentes();
+        offlineQueue.sincronizarPendentes();
+        window.addEventListener('online', offlineQueue.sincronizarPendentes);
+        return () => {
+            window.removeEventListener('online', offlineQueue.sincronizarPendentes);
+        };
+    }, []);
 
-    // Tenta sincronizar no exato segundo em que o celular reconectar
-    window.addEventListener('online', offlineQueue.sincronizarPendentes);
-
-    return () => {
-      window.removeEventListener('online', offlineQueue.sincronizarPendentes);
-    };
-  }, []);
     return (
         <Router>
             <AppRoutes />

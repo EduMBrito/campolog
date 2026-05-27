@@ -1,12 +1,11 @@
 """
 Configurações do CampoLog.
 """
-
 import os
 from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
-from datetime import timedelta
+from corsheaders.defaults import default_headers
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -101,6 +100,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Chave primária padrão
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Modelo de usuário customizado
+AUTH_USER_MODEL = 'accounts.User'
+
 # Django REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -114,38 +116,23 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
 }
 
 # JWT
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# CORS — em desenvolvimento, libera o frontend local
+# CORS
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:5173,http://127.0.0.1:5173",
     cast=Csv(),
 )
 
-# Definindo o modelo de usuário customizado
-AUTH_USER_MODEL = 'accounts.User'
-
-# Configuração do Django REST Framework para exigir JWT por padrão
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-}
-
-# Configuração do ciclo de vida dos Tokens
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # Expira rápido por segurança
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),    # Mantém o usuário logado no celular por 1 semana
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-unidade-id',
+]

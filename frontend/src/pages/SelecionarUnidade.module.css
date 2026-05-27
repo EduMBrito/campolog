@@ -1,0 +1,109 @@
+/* src/pages/SelecionarUnidade.module.css */
+.container {
+  min-h-screen: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #F8FAFC; /* Gelo Neutro */
+  padding: 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.card {
+  background-color: #ffffff;
+  padding: 2.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  max-width: 420px;
+  border-top: 5px solid #2D5A27; /* Verde Safra */
+  text-align: center;
+}
+
+.title {
+  color: #1E293B; /* Azul Log */
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #64748B;
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+  line-height: 1.4;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.unitButton {
+  width: 100%;
+  text-align: left;
+  padding: 1.1rem 1.25rem;
+  background-color: #ffffff;
+  border: 1px solid #E2E8F0; /* Cinza Borda */
+  border-radius: 6px;
+  color: #1E293B;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.unitButton::after {
+  content: "→";
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: all 0.2s ease-in-out;
+  color: #2D5A27;
+}
+
+.unitButton:hover {
+  background-color: #F0FDF4; /* Tom sutil de verde fenológico */
+  border-color: #2D5A27;
+  color: #2D5A27;
+}
+
+.unitButton:hover::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.errorBox {
+  background-color: #FFFBEB;
+  border: 1px solid #F59E0B; /* Âmbar Alerta */
+  color: #B45309;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.logoutLink {
+  background: none;
+  border: none;
+  color: #64748B;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: color 0.2s;
+}
+
+.logoutLink:hover {
+  color: #dc2626;
+}
+
+.loadingText {
+  color: #64748B;
+  font-weight: 500;
+  font-size: 1rem;
+}

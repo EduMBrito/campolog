@@ -1,18 +1,33 @@
 import api from './api';
 
+export interface TalhaoData {
+  id?: number;
+  nome: string;
+  area_m2: number;
+  coordenadas?: string; // Opcional (Polígono ou GPS se houver)
+}
+
 export const agronomiaService = {
+    
+    //Talhões já na estrutura multi-tenant
+    // GET: Traz apenas os talhões do Campus selecionado
+    getTalhoes: () => api.get<TalhaoData[]>('/agronomia/talhoes/'), 
+  
+    // POST: Cria um talhão amarrado dinamicamente ao Campus atual
+    createTalhao: (dados: TalhaoData) => api.post('/agronomia/talhoes/', dados),
+  
+    // PATCH/PUT: Edita dados de um talhão específico
+    updateTalhao: (id: number, dados: TalhaoData) => api.patch(`/agronomia/talhoes/${id}/`, dados),
+  
+    // DELETE: Remove um talhão
+    deleteTalhao: (id: number) => api.delete(`/agronomia/talhoes/${id}/`),
+    
     // Culturas
     getCulturas: () => api.get('/agronomia/culturas/'),
     createCultura: (data: { nome: string, variedade?: string }) => api.post('/agronomia/culturas/', data),
     updateCultura: (id: number, data: { nome: string, variedade?: string }) => api.put(`/agronomia/culturas/${id}/`, data),
     deleteCultura: (id: number) => api.delete(`/agronomia/culturas/${id}/`),
 
-    // Talhões (Já deixaremos as chamadas prontas para a próxima tela)
-    getTalhoes: () => api.get('/agronomia/talhoes/'),
-    createTalhao: (data: any) => api.post('/agronomia/talhoes/', data),
-    updateTalhao: (id: number, data: any) => api.put(`/agronomia/talhoes/${id}/`, data),
-    deleteTalhao: (id: number) => api.delete(`/agronomia/talhoes/${id}/`),
-    
     // Ciclos (Já deixaremos as chamadas prontas para a última tela do M2)
     getCiclos: () => api.get('/agronomia/ciclos/'),
     createCiclo: (data: any) => api.post('/agronomia/ciclos/', data),

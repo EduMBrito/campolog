@@ -1,67 +1,97 @@
-import { createContext, useState, useEffect, ReactNode } from 'react';
-import api from '../services/api';
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
 
+// 1. Definimos os Tipos (A magia do TypeScript)
 interface User {
-    id: number;
-    username: string;
-    role: string;
+  id: number;
+  username: string;
+  email?: string;
+  role: string;
+  // Pode adicionar outros campos que venham do seu Django
 }
 
 interface AuthContextData {
-    user: User | null;
-    login: (token: string, userData: User) => void;
-    logout: () => void;
-    loading: boolean;
+  user: User | null;
+  token: string | null;
+  unidadeAtiva: string | null;
+  loading: boolean;
+  login: (tokenData: string, userData: User) => void;
+  selecionarUnidade: (unidadeId: string | number) => void;
+  logout: () => void;
 }
 
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+// 2. Criação do Contexto já com a tipagem correta
 export const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  
+  // A NOVA VARIÁVEL: Guarda o ID da Unidade Produtiva (Talhão/Fazenda)
+  const [unidadeAtiva, setUnidadeAtiva] = useState<string | null>(null);
+  
+  const [loading, setLoading] = useState<boolean>(true);
 
-    useEffect(() => {
-        const restaurarSessao = () => {
-            try {
-                const token = localStorage.getItem('token');
-                const storedUser = localStorage.getItem('user');
+  useEffect(() => {
+    // Quando a aplicação abre, vamos buscar os dados na "memória" do navegador
+    const storedToken = localStorage.getItem('@CampoLog:token');
+    const storedUser = localStorage.getItem('@CampoLog:user');
+    const storedUnidade = localStorage.getItem('@CampoLog:unidadeAtiva');
 
-                if (token && storedUser) {
-                    // Configura o token para todas as futuras chamadas de API
-                    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                    
-                    // Recupera os dados do usuário do texto salvo
-                    const parsedUser = JSON.parse(storedUser);
-                    setUser(parsedUser);
-                    console.log("Sessão restaurada com sucesso:", parsedUser.username);
-                }
-            } catch (error) {
-                console.error("Erro ao recuperar sessão local:", error);
-                localStorage.clear(); // Limpa se houver dados corrompidos
-            } finally {
-                setLoading(false);
-            }
-        };
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+    }
 
-        restaurarSessao();
-    }, []);
+    // Se ele já tinha escolhido uma unidade antes de fechar o app, restauramos!
+    if (storedUnidade) {
+      setUnidadeAtiva(storedUnidade);
+    }
 
-    const login = (token: string, userData: User) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        setUser(userData);
-    };
+    setLoading(false);
+  }, []);
 
-    const logout = () => {
-        localStorage.clear();
-        delete api.defaults.headers.common['Authorization'];
-        setUser(null);
-    };
+  // Passo 1 do Login (Guarda apenas credenciais do utilizador)
+  const login = (tokenData: string, userData: User) => {
+    setToken(tokenData);
+    setUser(userData);
+    localStorage.setItem('@CampoLog:token', tokenData);
+    localStorage.setItem('@CampoLog:user', JSON.stringify(userData));
+  };
 
-    return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  // Passo 2 do Login (Guarda a Unidade escolhida)
+  const selecionarUnidade = (unidadeId: string | number) => {
+    const idString = String(unidadeId);
+    setUnidadeAtiva(idString);
+    localStorage.setItem('@CampoLog:unidadeAtiva', idString);
+  };
+
+  // Limpeza total ao sair
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    setUnidadeAtiva(null);
+    localStorage.removeItem('@CampoLog:token');
+    localStorage.removeItem('@CampoLog:user');
+    localStorage.removeItem('@CampoLog:unidadeAtiva');
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        unidadeAtiva,
+        loading,
+        login,
+        selecionarUnidade,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

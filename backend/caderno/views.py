@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError, PermissionDenied
+from core.permissions import RoleBasedPermission
 from django.contrib.auth import get_user_model
 from .models import RegistoCampo, UnidadeProdutiva
 from agronomia.models import CicloCultivo
@@ -11,11 +12,11 @@ from core.views import BaseTenantViewSet
 
 User = get_user_model() 
 
-class RegistoCampoViewSet(BaseTenantViewSet): # MUDOU AQUI (Herdando do tenant)
+class RegistoCampoViewSet(BaseTenantViewSet):
     """API para gerir os registos diários do Caderno de Campo"""
     queryset = RegistoCampo.objects.all()
     serializer_class = RegistoCampoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RoleBasedPermission]
 
     def perform_create(self, serializer):
         unidade_id = self.request.META.get('HTTP_X_UNIDADE_ID')

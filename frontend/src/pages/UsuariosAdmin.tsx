@@ -23,7 +23,7 @@ export default function UsuariosAdmin() {
 
     const carregarUsuarios = async () => {
         try {
-            const response = await api.get('/accounts/users/');
+            const response = await api.get('/accounts/usuarios-unidade/');
             setUsuarios(response.data);
         } catch (error) {
             console.error("Erro ao buscar usuários:", error);
@@ -34,22 +34,30 @@ export default function UsuariosAdmin() {
 
     useEffect(() => { carregarUsuarios(); }, []);
 
-    const handleSalvar = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            if (isEditing && userId) {
-                const dados: any = { username, email, role };
-                if (password) dados.password = password;
-                await api.patch(`/accounts/users/${userId}/`, dados);
-            } else {
-                await api.post('/accounts/users/', { username, email, password, role });
-            }
-            limparFormulario();
-            carregarUsuarios();
-        } catch (error) {
-            alert('Erro ao salvar. Verifique se o usuário já existe.');
+   const handleSalvar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+        if (isEditing && userId) {
+            const dados: any = { username, email, role };
+            if (password) dados.password = password;
+            
+            // ➡️ Atualizado para a nova rota multi-tenant de edição
+            await api.patch(`/accounts/usuarios-unidade/${userId}/`, dados);
+        } else {
+            // ➡️ Atualizado para a nova rota multi-tenant de criação
+            await api.post('/accounts/usuarios-unidade/', { username, email, password, role });
         }
-    };
+        
+        limparFormulario();
+        carregarUsuarios();
+        alert('Usuário salvo e vinculado a esta unidade com sucesso!');
+    } catch (error: any) {
+        // 🛠️ TRUQUE DE PROGRAMADOR: Se falhar, isso vai cuspir o erro exato do Django no F12 Console
+        console.error('🚨 Erro detalhado do servidor:', error.response?.data || error.message);
+        
+        alert('Erro ao salvar. Verifique se o nome de usuário já existe ou examine a consola (F12).');
+    }
+};
 
     const handleEditar = (user: any) => {
         setUserId(user.id);
@@ -185,8 +193,20 @@ export default function UsuariosAdmin() {
                                                 </span>
                                             </td>
                                             <td>
-                                                <button type="button" onClick={() => handleEditar(u)} style={{color: '#2D5A27', cursor: 'pointer', border: 'none', background: 'none', fontWeight: 'bold', marginRight: '8px'}}>Editar</button>
-                                                <button type="button" onClick={() => handleExcluir(u.id, u.username)} style={{color: '#dc2626', cursor: 'pointer', border: 'none', background: 'none', fontWeight: 'bold'}}>Excluir</button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleEditar(u)} 
+                                                    style={{ padding: '0.3rem 0.6rem', backgroundColor: '#1E293B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', marginRight: '8px' }}
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleExcluir(u.id, u.username)} 
+                                                    style={{ padding: '0.3rem 0.6rem', backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                                                >
+                                                    Excluir
+                                                </button>
                                             </td>
                                         </tr>
                                     ))

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { AuthContext } from '../contexts/AuthContext';
+import { usePermissoes } from '../hooks/usePermissoes';
 import styles from './DiarioCampo.module.css';
 
 export default function Diario() {
-    // Multi-tenant: Monitora a unidade de trabalho ativa
     const { unidadeAtiva } = useContext(AuthContext);
+    const { podeEditar, podeExcluir, somenteLeitura } = usePermissoes();
 
     // Estados de carregamento e listagem
     const [registros, setRegistros] = useState<any[]>([]);
@@ -167,9 +168,9 @@ export default function Diario() {
                 <Link to="/" style={{ color: '#2D5A27', fontWeight: 'bold', textDecoration: 'none' }}>&larr; Voltar ao Painel</Link>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>
-                
-                {/* 📝 FORMULÁRIO DE LANÇAMENTO */}
+            <div style={{ display: 'grid', gridTemplateColumns: somenteLeitura ? '1fr' : '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>
+
+                {!somenteLeitura && (
                 <form onSubmit={handleSalvar} style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderTop: '4px solid #2D5A27' }}>
                     <h2>{idEdit !== null ? '✏️ Editar Apontamento' : '🌱 Registrar Atividade'}</h2>
 
@@ -283,6 +284,7 @@ export default function Diario() {
                         )}
                     </div>
                 </form>
+                )}
 
                 {/* 📊 LINHA DO TEMPO (HISTÓRICO) */}
                 <div style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
@@ -351,22 +353,22 @@ export default function Diario() {
                                             <small style={{ color: '#94A3B8' }}>
                                                 📅 Atividade: {new Date(reg.data_atividade || reg.data_registo).toLocaleDateString('pt-BR')} {reg.autor_nome ? `• Por: ${reg.autor_nome}` : ''}
                                             </small>
+                                                {(podeEditar || podeExcluir) && (
                                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => handleEditar(reg)} 
-                                                        style={{ padding: '0.3rem 0.6rem', backgroundColor: '#1E293B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
-                                                    >
+                                                    {podeEditar && (
+                                                    <button type="button" onClick={() => handleEditar(reg)}
+                                                        style={{ padding: '0.3rem 0.6rem', backgroundColor: '#1E293B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}>
                                                         Editar
                                                     </button>
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => handleExcluir(reg.id)} 
-                                                        style={{ padding: '0.3rem 0.6rem', backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
-                                                    >
+                                                    )}
+                                                    {podeExcluir && (
+                                                    <button type="button" onClick={() => handleExcluir(reg.id)}
+                                                        style={{ padding: '0.3rem 0.6rem', backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}>
                                                         Excluir
                                                     </button>
+                                                    )}
                                                 </div>
+                                                )}
                                         </div>
                                     </div>
                                 );

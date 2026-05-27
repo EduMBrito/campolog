@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import api from '../services/api';
 import { AuthContext } from '../contexts/AuthContext';
+import { usePermissoes } from '../hooks/usePermissoes';
 import styles from './Ciclos.module.css';
 
 export default function Ciclos() {
     const navigate = useNavigate();
     const { unidadeAtiva } = useContext(AuthContext);
+    const { podeEditar, podeExcluir, somenteLeitura } = usePermissoes();
     const [cicloQr, setCicloQr] = useState<any>(null);
     const qrRef = useRef<HTMLDivElement>(null);
 
@@ -205,9 +207,9 @@ export default function Ciclos() {
                 <Link to="/" style={{ color: '#2D5A27', fontWeight: 'bold', textDecoration: 'none' }}>&larr; Voltar ao Painel</Link>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem', alignItems: 'start' }}>
-                
-                {/* 📝 FORMULÁRIO DE GESTÃO */}
+            <div style={{ display: 'grid', gridTemplateColumns: somenteLeitura ? '1fr' : '1fr 1.5fr', gap: '2rem', alignItems: 'start' }}>
+
+                {!somenteLeitura && (
                 <form onSubmit={handleSalvar} style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderTop: '4px solid #2D5A27' }}>
                     <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', color: '#1E293B' }}>
                         {idEdit !== null ? '✏️ Alterar Ciclo' : '🌱 Iniciar Novo Planejamento/Ciclo'}
@@ -291,6 +293,7 @@ export default function Ciclos() {
                         )}
                     </div>
                 </form>
+                )}
 
                 {/* 📊 LISTAGEM COM PAINEL DE CONTROLE DE FILTROS RECUPERADO */}
                 <div style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
@@ -359,35 +362,29 @@ export default function Ciclos() {
                                                 </td>
                                                 <td style={{ padding: '0.75rem' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                                        {(podeEditar || podeExcluir) && (
                                                         <div style={{ display: 'flex', gap: '0.3rem' }}>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleEditar(c)}
-                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1E293B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                                            >
+                                                            {podeEditar && (
+                                                            <button type="button" onClick={() => handleEditar(c)}
+                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1E293B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>
                                                                 Editar
                                                             </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleExcluir(c.id)}
-                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                                            >
+                                                            )}
+                                                            {podeExcluir && (
+                                                            <button type="button" onClick={() => handleExcluir(c.id)}
+                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>
                                                                 Excluir
                                                             </button>
+                                                            )}
                                                         </div>
+                                                        )}
                                                         <div style={{ display: 'flex', gap: '0.3rem' }}>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setCicloQr(c)}
-                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#F59E0B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
-                                                            >
+                                                            <button type="button" onClick={() => setCicloQr(c)}
+                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#F59E0B', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                                 QR Code
                                                             </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => navigate(`/rastreabilidade/${c.id}`)}
-                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#2D5A27', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                                            >
+                                                            <button type="button" onClick={() => navigate(`/rastreabilidade/${c.id}`)}
+                                                                style={{ padding: '0.25rem 0.5rem', backgroundColor: '#2D5A27', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>
                                                                 Histórico
                                                             </button>
                                                         </div>

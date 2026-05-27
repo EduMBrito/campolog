@@ -1,12 +1,10 @@
 from django.urls import path, include
+from .views import MinhasUnidadesView, health_check
 
 urlpatterns = [
-    # Rotas do Módulo 1 (Utilizadores)
-    path('accounts/', include('accounts.urls')), 
-    
-    # Rotas do Módulo 2 (Talhões e Culturas)
+    path('health-check/', health_check, name='health-check'),
+    path('minhas-unidades/', MinhasUnidadesView.as_view(), name='minhas-unidades'),
+    path('accounts/', include('accounts.urls')),
     path('agronomia/', include('agronomia.urls')),
-
-    # Rotas do Módulo 3 (Caderno de Campo)
     path('caderno/', include('caderno.urls')),
 ]

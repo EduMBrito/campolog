@@ -359,7 +359,7 @@ Arquivos de mídia são salvos em `backend/media/` (organizado por data) e servi
 | M5 | Observações e Monitoramento Fenológico | Parcial |
 | M6 | Gestão de Unidades Produtivas (multi-tenant) | Completo |
 | M7 | Rastreabilidade pública via QR Code + PDF | Parcial |
-| M8 | Modo Offline (PWA + IndexedDB + sync) | Completo |
+| M8 | Modo Offline (PWA + IndexedDB + sync) | Completo (resolução de conflitos no [backlog](BACKLOG.md)) |
 | M9 | Auditoria e Fluxo de Aprovação Docente | Planejado |
 
 ---
@@ -402,7 +402,23 @@ Registre em `INSTALLED_APPS` (`config/settings.py`) e adicione as rotas em `conf
 
 ### PWA e offline
 
-Mutações do diário chamam `offlineQueue.salvar()` quando `!navigator.onLine`. O sync acontece automaticamente ao reconectar (`window.online`). Fotos são serializadas em base64 para o IndexedDB e reconvertidas em `File` no momento do sync.
+O CRUD do diário (criar, editar e excluir) funciona offline. Quando
+`!navigator.onLine` — ou quando uma requisição falha por rede — a operação é
+enfileirada em **IndexedDB** via `offlineQueue` (`frontend/src/utils/offlineQueue.ts`):
+
+- Cada item guarda a operação (`criar` / `atualizar` / `deletar`) e, no caso de
+  anexo, o **arquivo (`File`/`Blob`) é armazenado de forma nativa** — sem
+  conversão para base64 (evita o teto de ~5 MB e a inflação de ~33% do
+  localStorage, e não bloqueia a main thread).
+- O sync roda automaticamente ao reconectar (`window.online`), enviando
+  `POST`/`PATCH`/`DELETE`. Cada item é removido individualmente da fila ao ser
+  confirmado pelo servidor (atômico, sem race condition). Um guard de
+  concorrência impede envio duplicado quando App e página disparam o sync juntos.
+- A UI do diário mostra um indicador de status offline + nº de registros
+  pendentes de sincronização.
+
+> Conflitos são resolvidos hoje por *last-write-wins*. A detecção/sinalização de
+> conflitos (versionamento + HTTP 409) está no [BACKLOG.md](BACKLOG.md).
 
 ---
 

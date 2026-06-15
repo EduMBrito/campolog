@@ -102,10 +102,13 @@ export default function Diario() {
         }
     };
 
-    // Enfileira o registro no IndexedDB para envio posterior (fallback offline).
-    // Disponível apenas para novos registros — edição offline exige conexão.
+    // Enfileira o lançamento (criação ou edição) no IndexedDB para envio
+    // posterior quando estiver sem conexão (fallback offline).
     const salvarOffline = async (descricao: string) => {
+        const ehEdicao = idEdit !== null;
         await offlineQueue.salvar({
+            operacao: ehEdicao ? 'atualizar' : 'criar',
+            registoId: ehEdicao ? idEdit : undefined,
             ciclo: Number(cicloId),
             tipo,
             descricao,
@@ -113,7 +116,18 @@ export default function Diario() {
             anexoNome: arquivoAnexo?.name,
         });
         await atualizarPendentes();
-        alert('📴 Sem conexão. Registro salvo no dispositivo e será enviado automaticamente quando a internet voltar.');
+
+        // Atualização otimista: offline, a lista não recarrega do servidor;
+        // reflete a edição localmente para não exibir o texto antigo.
+        if (ehEdicao) {
+            setRegistros(prev => prev.map(r =>
+                r.id === idEdit ? { ...r, tipo, descricao } : r
+            ));
+        }
+
+        alert(ehEdicao
+            ? '📴 Sem conexão. Edição salva no dispositivo e será enviada quando a internet voltar.'
+            : '📴 Sem conexão. Registro salvo no dispositivo e será enviado automaticamente quando a internet voltar.');
         limparFormulario();
         carregarRegistrosDoDiario();
     };
@@ -128,8 +142,8 @@ export default function Diario() {
         }
         descricaoCompilada = descricaoCompilada.trim();
 
-        // Sem internet: enfileira novos registros para sincronização futura.
-        if (!navigator.onLine && idEdit === null) {
+        // Sem internet: enfileira criação ou edição para sincronização futura.
+        if (!navigator.onLine) {
             await salvarOffline(descricaoCompilada);
             return;
         }
@@ -160,9 +174,9 @@ export default function Diario() {
             limparFormulario();
             carregarRegistrosDoDiario();
         } catch (error: any) {
-            // Falha de rede (sem resposta do servidor) num registro novo:
-            // a conexão caiu durante o envio → guarda offline em vez de perder.
-            if (idEdit === null && !error.response) {
+            // Falha de rede (sem resposta do servidor): a conexão caiu durante
+            // o envio → guarda offline (criação ou edição) em vez de perder.
+            if (!error.response) {
                 await salvarOffline(descricaoCompilada);
                 return;
             }

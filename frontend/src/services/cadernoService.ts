@@ -11,6 +11,11 @@ export const cadernoService = {
     updateRegisto: (id: number, formData: FormData) => api.put(`/caderno/diario/${id}/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
+
+    // Atualização parcial (usada pela sincronização offline de edições)
+    patchRegisto: (id: number, formData: FormData) => api.patch(`/caderno/diario/${id}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
     
     deleteRegisto: (id: number) => api.delete(`/caderno/diario/${id}/`),
 

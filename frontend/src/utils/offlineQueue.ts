@@ -16,6 +16,8 @@ const STORE = 'fila-diario';
 
 export interface RegistoPendente {
     _localId?: number; // chave auto-incremental do IndexedDB
+    operacao: 'criar' | 'atualizar';
+    registoId?: number; // id do registo no servidor (apenas para 'atualizar')
     ciclo: number;
     tipo: string;
     descricao: string;
@@ -93,7 +95,11 @@ export const offlineQueue = {
                         formData.append('anexo', item.anexo, item.anexoNome || 'anexo.jpg');
                     }
 
-                    await cadernoService.createRegisto(formData);
+                    if (item.operacao === 'atualizar' && item.registoId !== undefined) {
+                        await cadernoService.patchRegisto(item.registoId, formData);
+                    } else {
+                        await cadernoService.createRegisto(formData);
+                    }
 
                     // Sucesso confirmado pelo servidor → remove apenas este item.
                     if (item._localId !== undefined) {

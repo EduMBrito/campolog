@@ -16,11 +16,11 @@ const STORE = 'fila-diario';
 
 export interface RegistoPendente {
     _localId?: number; // chave auto-incremental do IndexedDB
-    operacao: 'criar' | 'atualizar';
-    registoId?: number; // id do registo no servidor (apenas para 'atualizar')
-    ciclo: number;
-    tipo: string;
-    descricao: string;
+    operacao: 'criar' | 'atualizar' | 'deletar';
+    registoId?: number; // id do registo no servidor (para 'atualizar' e 'deletar')
+    ciclo?: number; // não usados na exclusão
+    tipo?: string;
+    descricao?: string;
     anexo?: Blob | null; // arquivo físico guardado nativamente
     anexoNome?: string;
     criadoEm: number;
@@ -71,6 +71,20 @@ export const offlineQueue = {
         return db.count(STORE);
     },
 
+    // Remove da fila quaisquer operações pendentes de um registo do servidor.
+    // Usado ao excluir offline um registo que tinha edições ainda não enviadas
+    // (evita enviar um PATCH para algo que será apagado).
+    removerPendentesDoRegisto: async (registoId: number): Promise<void> => {
+        const db = await getDB();
+        const tx = db.transaction(STORE, 'readwrite');
+        for (const item of await tx.store.getAll()) {
+            if (item.registoId === registoId && item._localId !== undefined) {
+                await tx.store.delete(item._localId);
+            }
+        }
+        await tx.done;
+    },
+
     // Envia todos os registros pendentes. Cada item é removido individualmente
     // ao ser confirmado pelo servidor; falhas mantêm o item na fila para a
     // próxima tentativa, sem afetar os demais (operação atômica por chave).
@@ -87,18 +101,29 @@ export const offlineQueue = {
 
             for (const item of pendentes) {
                 try {
-                    const formData = new FormData();
-                    formData.append('ciclo', String(item.ciclo));
-                    formData.append('tipo', item.tipo);
-                    formData.append('descricao', item.descricao);
-                    if (item.anexo) {
-                        formData.append('anexo', item.anexo, item.anexoNome || 'anexo.jpg');
-                    }
-
-                    if (item.operacao === 'atualizar' && item.registoId !== undefined) {
-                        await cadernoService.patchRegisto(item.registoId, formData);
+                    if (item.operacao === 'deletar' && item.registoId !== undefined) {
+                        try {
+                            await cadernoService.deleteRegisto(item.registoId);
+                        } catch (err: any) {
+                            // 404/410: registo já não existe no servidor → exclusão
+                            // já concluída; segue para remover o item da fila.
+                            const status = err?.response?.status;
+                            if (status !== 404 && status !== 410) throw err;
+                        }
                     } else {
-                        await cadernoService.createRegisto(formData);
+                        const formData = new FormData();
+                        formData.append('ciclo', String(item.ciclo));
+                        formData.append('tipo', item.tipo ?? '');
+                        formData.append('descricao', item.descricao ?? '');
+                        if (item.anexo) {
+                            formData.append('anexo', item.anexo, item.anexoNome || 'anexo.jpg');
+                        }
+
+                        if (item.operacao === 'atualizar' && item.registoId !== undefined) {
+                            await cadernoService.patchRegisto(item.registoId, formData);
+                        } else {
+                            await cadernoService.createRegisto(formData);
+                        }
                     }
 
                     // Sucesso confirmado pelo servidor → remove apenas este item.

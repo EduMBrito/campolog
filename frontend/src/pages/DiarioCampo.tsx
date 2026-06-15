@@ -198,16 +198,35 @@ export default function Diario() {
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    // Enfileira a exclusão de um registro do servidor para envio posterior.
+    const excluirOffline = async (id: number) => {
+        // Descarta edições pendentes do mesmo registro antes de marcar exclusão.
+        await offlineQueue.removerPendentesDoRegisto(id);
+        await offlineQueue.salvar({ operacao: 'deletar', registoId: id });
+        await atualizarPendentes();
+        setRegistros(prev => prev.filter(r => r.id !== id)); // some da lista na hora
+        alert('📴 Sem conexão. Exclusão salva e será aplicada quando a internet voltar.');
+    };
+
     const handleExcluir = async (id: number) => {
-        if (window.confirm('Deseja realmente apagar este registro do diário de campo?')) {
-            try {
-                await api.delete(`/caderno/diario/${id}/`);
-                alert('Registro removido.');
-                carregarRegistrosDoDiario();
-            } catch (error) {
-                console.error('Erro ao remover do diário:', error);
-                alert('Não foi possível excluir o registro.');
+        if (!window.confirm('Deseja realmente apagar este registro do diário de campo?')) return;
+
+        if (!navigator.onLine) {
+            await excluirOffline(id);
+            return;
+        }
+        try {
+            await api.delete(`/caderno/diario/${id}/`);
+            alert('Registro removido.');
+            carregarRegistrosDoDiario();
+        } catch (error: any) {
+            // Falha de rede → guarda a exclusão offline em vez de falhar.
+            if (!error.response) {
+                await excluirOffline(id);
+                return;
             }
+            console.error('Erro ao remover do diário:', error);
+            alert('Não foi possível excluir o registro.');
         }
     };
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { AuthContext } from '../contexts/AuthContext';
 import { usePermissoes } from '../hooks/usePermissoes';
+import { offlineQueue } from '../utils/offlineQueue';
 import styles from './DiarioCampo.module.css';
 
 export default function Diario() {
@@ -36,6 +37,14 @@ export default function Diario() {
     // Filtro por tipo no histórico
     const [filtroTipo, setFiltroTipo] = useState('');
 
+    // Estado de conectividade e fila offline (M8)
+    const [online, setOnline] = useState(navigator.onLine);
+    const [pendentes, setPendentes] = useState(0);
+
+    const atualizarPendentes = async () => {
+        setPendentes(await offlineQueue.contarPendentes());
+    };
+
     // Monitora a troca de Campus para atualizar os dados em tempo de execução
     useEffect(() => {
         if (unidadeAtiva) {
@@ -43,6 +52,24 @@ export default function Diario() {
             carregarRegistrosDoDiario();
         }
     }, [unidadeAtiva]);
+
+    // Acompanha conectividade: ao voltar a rede, sincroniza a fila e recarrega.
+    useEffect(() => {
+        atualizarPendentes();
+        const handleOnline = async () => {
+            setOnline(true);
+            await offlineQueue.sincronizarPendentes();
+            await atualizarPendentes();
+            carregarRegistrosDoDiario();
+        };
+        const handleOffline = () => setOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     const carregarCiclosDoCampus = async () => {
         try {
@@ -75,21 +102,58 @@ export default function Diario() {
         }
     };
 
+    // Enfileira o lançamento (criação ou edição) no IndexedDB para envio
+    // posterior quando estiver sem conexão (fallback offline).
+    const salvarOffline = async (descricao: string) => {
+        const ehEdicao = idEdit !== null;
+        await offlineQueue.salvar({
+            operacao: ehEdicao ? 'atualizar' : 'criar',
+            registoId: ehEdicao ? idEdit : undefined,
+            ciclo: Number(cicloId),
+            tipo,
+            descricao,
+            anexo: arquivoAnexo,
+            anexoNome: arquivoAnexo?.name,
+        });
+        await atualizarPendentes();
+
+        // Atualização otimista: offline, a lista não recarrega do servidor;
+        // reflete a edição localmente para não exibir o texto antigo.
+        if (ehEdicao) {
+            setRegistros(prev => prev.map(r =>
+                r.id === idEdit ? { ...r, tipo, descricao } : r
+            ));
+        }
+
+        alert(ehEdicao
+            ? '📴 Sem conexão. Edição salva no dispositivo e será enviada quando a internet voltar.'
+            : '📴 Sem conexão. Registro salvo no dispositivo e será enviado automaticamente quando a internet voltar.');
+        limparFormulario();
+        carregarRegistrosDoDiario();
+    };
+
     const handleSalvar = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            let descricaoCompilada = detalhesTexto;
-            if (tipo === 'OBSERVACAO') {
-                descricaoCompilada = `[Estado: ${estadioFenologico}] [Severidade Praga: ${severidadePraga}] ${detalhesTexto}`;
-            } else if (tipo === 'INSUMO' && nomeInsumo) {
-                descricaoCompilada = `[Produto/Insumo: ${nomeInsumo}] ${detalhesTexto}`;
-            }
+        let descricaoCompilada = detalhesTexto;
+        if (tipo === 'OBSERVACAO') {
+            descricaoCompilada = `[Estado: ${estadioFenologico}] [Severidade Praga: ${severidadePraga}] ${detalhesTexto}`;
+        } else if (tipo === 'INSUMO' && nomeInsumo) {
+            descricaoCompilada = `[Produto/Insumo: ${nomeInsumo}] ${detalhesTexto}`;
+        }
+        descricaoCompilada = descricaoCompilada.trim();
 
+        // Sem internet: enfileira criação ou edição para sincronização futura.
+        if (!navigator.onLine) {
+            await salvarOffline(descricaoCompilada);
+            return;
+        }
+
+        try {
             if (arquivoAnexo) {
                 const formData = new FormData();
                 formData.append('ciclo', String(Number(cicloId)));
                 formData.append('tipo', tipo);
-                formData.append('descricao', descricaoCompilada.trim());
+                formData.append('descricao', descricaoCompilada);
                 formData.append('anexo', arquivoAnexo);
                 const cfg = { headers: { 'Content-Type': 'multipart/form-data' } };
                 if (idEdit !== null) {
@@ -98,7 +162,7 @@ export default function Diario() {
                     await api.post('/caderno/diario/', formData, cfg);
                 }
             } else {
-                const payload = { ciclo: Number(cicloId), tipo, descricao: descricaoCompilada.trim() };
+                const payload = { ciclo: Number(cicloId), tipo, descricao: descricaoCompilada };
                 if (idEdit !== null) {
                     await api.patch(`/caderno/diario/${idEdit}/`, payload);
                 } else {
@@ -110,6 +174,12 @@ export default function Diario() {
             limparFormulario();
             carregarRegistrosDoDiario();
         } catch (error: any) {
+            // Falha de rede (sem resposta do servidor): a conexão caiu durante
+            // o envio → guarda offline (criação ou edição) em vez de perder.
+            if (!error.response) {
+                await salvarOffline(descricaoCompilada);
+                return;
+            }
             console.error('Erro ao salvar no diário:', error.response?.data || error.message);
             alert('Erro ao salvar lançamento. Verifique os dados inseridos.');
         }
@@ -128,16 +198,35 @@ export default function Diario() {
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    // Enfileira a exclusão de um registro do servidor para envio posterior.
+    const excluirOffline = async (id: number) => {
+        // Descarta edições pendentes do mesmo registro antes de marcar exclusão.
+        await offlineQueue.removerPendentesDoRegisto(id);
+        await offlineQueue.salvar({ operacao: 'deletar', registoId: id });
+        await atualizarPendentes();
+        setRegistros(prev => prev.filter(r => r.id !== id)); // some da lista na hora
+        alert('📴 Sem conexão. Exclusão salva e será aplicada quando a internet voltar.');
+    };
+
     const handleExcluir = async (id: number) => {
-        if (window.confirm('Deseja realmente apagar este registro do diário de campo?')) {
-            try {
-                await api.delete(`/caderno/diario/${id}/`);
-                alert('Registro removido.');
-                carregarRegistrosDoDiario();
-            } catch (error) {
-                console.error('Erro ao remover do diário:', error);
-                alert('Não foi possível excluir o registro.');
+        if (!window.confirm('Deseja realmente apagar este registro do diário de campo?')) return;
+
+        if (!navigator.onLine) {
+            await excluirOffline(id);
+            return;
+        }
+        try {
+            await api.delete(`/caderno/diario/${id}/`);
+            alert('Registro removido.');
+            carregarRegistrosDoDiario();
+        } catch (error: any) {
+            // Falha de rede → guarda a exclusão offline em vez de falhar.
+            if (!error.response) {
+                await excluirOffline(id);
+                return;
             }
+            console.error('Erro ao remover do diário:', error);
+            alert('Não foi possível excluir o registro.');
         }
     };
 
@@ -171,7 +260,26 @@ export default function Diario() {
                     <h1 style={{ color: '#1E293B', fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>Diário de Intervenções e Ocorrências</h1>
                     <p style={{ color: '#64748B', fontSize: '0.9rem', marginTop: '0.3rem' }}>Caderno de campo digitalizado integrado à governança técnica do campus.</p>
                 </div>
-                <Link to="/" style={{ color: '#2D5A27', fontWeight: 'bold', textDecoration: 'none' }}>&larr; Voltar ao Painel</Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {(!online || pendentes > 0) && (
+                        <span
+                            title={online
+                                ? 'Registros aguardando envio ao servidor'
+                                : 'Sem conexão — novos registros ficam salvos no dispositivo'}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                backgroundColor: '#FEF3C7', color: '#92400E',
+                                border: '1px solid #F59E0B', borderRadius: '999px',
+                                padding: '0.35rem 0.8rem', fontSize: '0.8rem', fontWeight: 600,
+                            }}
+                        >
+                            {!online && '📴 Offline'}
+                            {!online && pendentes > 0 && ' · '}
+                            {pendentes > 0 && `⏳ ${pendentes} pendente${pendentes > 1 ? 's' : ''}`}
+                        </span>
+                    )}
+                    <Link to="/" style={{ color: '#2D5A27', fontWeight: 'bold', textDecoration: 'none' }}>&larr; Voltar ao Painel</Link>
+                </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: somenteLeitura ? '1fr' : '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>

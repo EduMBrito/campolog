@@ -1,65 +1,100 @@
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { cadernoService } from '../services/cadernoService';
 
-const QUEUE_KEY = 'campolog_diario_queue';
+// ---------------------------------------------------------------------------
+// Fila de sincronização offline (M8 - PWA)
+//
+// Armazenamento: IndexedDB (via 'idb'), guardando o arquivo (File/Blob) de
+// forma nativa — sem converter para Base64. Isso evita o limite de ~5MB e a
+// inflação de ~33% do localStorage, não bloqueia a main thread e permite
+// operações atômicas por chave (sem race condition na sincronização).
+// ---------------------------------------------------------------------------
 
-// Função que reconstrói o arquivo físico a partir do texto Base64
-const base64ToFile = (base64: string, filename: string): File => {
-    const arr = base64.split(',');
-    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
+const DB_NAME = 'campolog-offline';
+const DB_VERSION = 1;
+const STORE = 'fila-diario';
+
+export interface RegistoPendente {
+    _localId?: number; // chave auto-incremental do IndexedDB
+    ciclo: number;
+    tipo: string;
+    descricao: string;
+    anexo?: Blob | null; // arquivo físico guardado nativamente
+    anexoNome?: string;
+    criadoEm: number;
+}
+
+interface CampoLogDB extends DBSchema {
+    [STORE]: {
+        key: number;
+        value: RegistoPendente;
+    };
+}
+
+let dbPromise: Promise<IDBPDatabase<CampoLogDB>> | null = null;
+
+const getDB = (): Promise<IDBPDatabase<CampoLogDB>> => {
+    if (!dbPromise) {
+        dbPromise = openDB<CampoLogDB>(DB_NAME, DB_VERSION, {
+            upgrade(db) {
+                if (!db.objectStoreNames.contains(STORE)) {
+                    db.createObjectStore(STORE, { keyPath: '_localId', autoIncrement: true });
+                }
+            },
+        });
     }
-    return new File([u8arr], filename, { type: mime });
+    return dbPromise;
 };
 
 export const offlineQueue = {
-    salvar: (dados: any) => {
-        const fila = offlineQueue.obterFila();
-        fila.push({ ...dados, _localId: Date.now() });
-        localStorage.setItem(QUEUE_KEY, JSON.stringify(fila));
+    // Enfileira um novo registro para envio posterior. Retorna a chave local.
+    salvar: async (dados: Omit<RegistoPendente, '_localId' | 'criadoEm'>): Promise<number> => {
+        const db = await getDB();
+        return db.add(STORE, { ...dados, criadoEm: Date.now() });
     },
-    
-    obterFila: () => {
-        const fila = localStorage.getItem(QUEUE_KEY);
-        return fila ? JSON.parse(fila) : [];
-    },
-    
-    sincronizarPendentes: async () => {
-        if (!navigator.onLine) return; 
-        
-        const fila = offlineQueue.obterFila();
-        if (fila.length === 0) return;
 
-        console.log(`📡 Sincronizando ${fila.length} registros offline...`);
-        
-        const pendentes = [...fila];
+    obterFila: async (): Promise<RegistoPendente[]> => {
+        const db = await getDB();
+        return db.getAll(STORE);
+    },
+
+    contarPendentes: async (): Promise<number> => {
+        const db = await getDB();
+        return db.count(STORE);
+    },
+
+    // Envia todos os registros pendentes. Cada item é removido individualmente
+    // ao ser confirmado pelo servidor; falhas mantêm o item na fila para a
+    // próxima tentativa, sem afetar os demais (operação atômica por chave).
+    sincronizarPendentes: async (): Promise<void> => {
+        if (!navigator.onLine) return;
+
+        const pendentes = await offlineQueue.obterFila();
+        if (pendentes.length === 0) return;
+
+        console.log(`📡 Sincronizando ${pendentes.length} registro(s) offline...`);
+        const db = await getDB();
+
         for (const item of pendentes) {
             try {
-                const localId = item._localId;
-                delete item._localId; 
-                
                 const formData = new FormData();
-                Object.keys(item).forEach(key => {
-                    // Se achar a foto em texto, converte de volta para Arquivo Físico
-                    if (key === 'fotoBase64' && item[key]) {
-                        const file = base64ToFile(item[key], `offline_upload_${Date.now()}.jpg`);
-                        formData.append('anexo', file);
-                    } else if (key !== 'fotoBase64' && item[key] !== null && item[key] !== '') {
-                        formData.append(key, item[key]);
-                    }
-                });
-                
-                await cadernoService.createRegisto(formData as any);
-                
-                const filaAtualizada = offlineQueue.obterFila().filter((r: any) => r._localId !== localId);
-                localStorage.setItem(QUEUE_KEY, JSON.stringify(filaAtualizada));
-                
+                formData.append('ciclo', String(item.ciclo));
+                formData.append('tipo', item.tipo);
+                formData.append('descricao', item.descricao);
+                if (item.anexo) {
+                    formData.append('anexo', item.anexo, item.anexoNome || 'anexo.jpg');
+                }
+
+                await cadernoService.createRegisto(formData);
+
+                // Sucesso confirmado pelo servidor → remove apenas este item.
+                if (item._localId !== undefined) {
+                    await db.delete(STORE, item._localId);
+                }
             } catch (error) {
-                console.error('Falha ao sincronizar item.', error);
+                // Mantém na fila e tenta novamente na próxima reconexão.
+                console.error('Falha ao sincronizar item da fila offline.', error);
             }
         }
-    }
+    },
 };

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { AuthContext } from '../contexts/AuthContext';
 import { usePermissoes } from '../hooks/usePermissoes';
+import { offlineQueue } from '../utils/offlineQueue';
 import styles from './DiarioCampo.module.css';
 
 export default function Diario() {
@@ -75,21 +76,43 @@ export default function Diario() {
         }
     };
 
+    // Enfileira o registro no IndexedDB para envio posterior (fallback offline).
+    // Disponível apenas para novos registros — edição offline exige conexão.
+    const salvarOffline = async (descricao: string) => {
+        await offlineQueue.salvar({
+            ciclo: Number(cicloId),
+            tipo,
+            descricao,
+            anexo: arquivoAnexo,
+            anexoNome: arquivoAnexo?.name,
+        });
+        alert('📴 Sem conexão. Registro salvo no dispositivo e será enviado automaticamente quando a internet voltar.');
+        limparFormulario();
+        carregarRegistrosDoDiario();
+    };
+
     const handleSalvar = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            let descricaoCompilada = detalhesTexto;
-            if (tipo === 'OBSERVACAO') {
-                descricaoCompilada = `[Estado: ${estadioFenologico}] [Severidade Praga: ${severidadePraga}] ${detalhesTexto}`;
-            } else if (tipo === 'INSUMO' && nomeInsumo) {
-                descricaoCompilada = `[Produto/Insumo: ${nomeInsumo}] ${detalhesTexto}`;
-            }
+        let descricaoCompilada = detalhesTexto;
+        if (tipo === 'OBSERVACAO') {
+            descricaoCompilada = `[Estado: ${estadioFenologico}] [Severidade Praga: ${severidadePraga}] ${detalhesTexto}`;
+        } else if (tipo === 'INSUMO' && nomeInsumo) {
+            descricaoCompilada = `[Produto/Insumo: ${nomeInsumo}] ${detalhesTexto}`;
+        }
+        descricaoCompilada = descricaoCompilada.trim();
 
+        // Sem internet: enfileira novos registros para sincronização futura.
+        if (!navigator.onLine && idEdit === null) {
+            await salvarOffline(descricaoCompilada);
+            return;
+        }
+
+        try {
             if (arquivoAnexo) {
                 const formData = new FormData();
                 formData.append('ciclo', String(Number(cicloId)));
                 formData.append('tipo', tipo);
-                formData.append('descricao', descricaoCompilada.trim());
+                formData.append('descricao', descricaoCompilada);
                 formData.append('anexo', arquivoAnexo);
                 const cfg = { headers: { 'Content-Type': 'multipart/form-data' } };
                 if (idEdit !== null) {
@@ -98,7 +121,7 @@ export default function Diario() {
                     await api.post('/caderno/diario/', formData, cfg);
                 }
             } else {
-                const payload = { ciclo: Number(cicloId), tipo, descricao: descricaoCompilada.trim() };
+                const payload = { ciclo: Number(cicloId), tipo, descricao: descricaoCompilada };
                 if (idEdit !== null) {
                     await api.patch(`/caderno/diario/${idEdit}/`, payload);
                 } else {
@@ -110,6 +133,12 @@ export default function Diario() {
             limparFormulario();
             carregarRegistrosDoDiario();
         } catch (error: any) {
+            // Falha de rede (sem resposta do servidor) num registro novo:
+            // a conexão caiu durante o envio → guarda offline em vez de perder.
+            if (idEdit === null && !error.response) {
+                await salvarOffline(descricaoCompilada);
+                return;
+            }
             console.error('Erro ao salvar no diário:', error.response?.data || error.message);
             alert('Erro ao salvar lançamento. Verifique os dados inseridos.');
         }

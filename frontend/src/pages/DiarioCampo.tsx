@@ -37,6 +37,14 @@ export default function Diario() {
     // Filtro por tipo no histórico
     const [filtroTipo, setFiltroTipo] = useState('');
 
+    // Estado de conectividade e fila offline (M8)
+    const [online, setOnline] = useState(navigator.onLine);
+    const [pendentes, setPendentes] = useState(0);
+
+    const atualizarPendentes = async () => {
+        setPendentes(await offlineQueue.contarPendentes());
+    };
+
     // Monitora a troca de Campus para atualizar os dados em tempo de execução
     useEffect(() => {
         if (unidadeAtiva) {
@@ -44,6 +52,24 @@ export default function Diario() {
             carregarRegistrosDoDiario();
         }
     }, [unidadeAtiva]);
+
+    // Acompanha conectividade: ao voltar a rede, sincroniza a fila e recarrega.
+    useEffect(() => {
+        atualizarPendentes();
+        const handleOnline = async () => {
+            setOnline(true);
+            await offlineQueue.sincronizarPendentes();
+            await atualizarPendentes();
+            carregarRegistrosDoDiario();
+        };
+        const handleOffline = () => setOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     const carregarCiclosDoCampus = async () => {
         try {
@@ -86,6 +112,7 @@ export default function Diario() {
             anexo: arquivoAnexo,
             anexoNome: arquivoAnexo?.name,
         });
+        await atualizarPendentes();
         alert('📴 Sem conexão. Registro salvo no dispositivo e será enviado automaticamente quando a internet voltar.');
         limparFormulario();
         carregarRegistrosDoDiario();
@@ -200,7 +227,26 @@ export default function Diario() {
                     <h1 style={{ color: '#1E293B', fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>Diário de Intervenções e Ocorrências</h1>
                     <p style={{ color: '#64748B', fontSize: '0.9rem', marginTop: '0.3rem' }}>Caderno de campo digitalizado integrado à governança técnica do campus.</p>
                 </div>
-                <Link to="/" style={{ color: '#2D5A27', fontWeight: 'bold', textDecoration: 'none' }}>&larr; Voltar ao Painel</Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {(!online || pendentes > 0) && (
+                        <span
+                            title={online
+                                ? 'Registros aguardando envio ao servidor'
+                                : 'Sem conexão — novos registros ficam salvos no dispositivo'}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                backgroundColor: '#FEF3C7', color: '#92400E',
+                                border: '1px solid #F59E0B', borderRadius: '999px',
+                                padding: '0.35rem 0.8rem', fontSize: '0.8rem', fontWeight: 600,
+                            }}
+                        >
+                            {!online && '📴 Offline'}
+                            {!online && pendentes > 0 && ' · '}
+                            {pendentes > 0 && `⏳ ${pendentes} pendente${pendentes > 1 ? 's' : ''}`}
+                        </span>
+                    )}
+                    <Link to="/" style={{ color: '#2D5A27', fontWeight: 'bold', textDecoration: 'none' }}>&larr; Voltar ao Painel</Link>
+                </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: somenteLeitura ? '1fr' : '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>

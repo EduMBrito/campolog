@@ -33,6 +33,12 @@ interface CampoLogDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<CampoLogDB>> | null = null;
 
+// Guarda de concorrência: chamadas simultâneas a sincronizarPendentes
+// (ex.: App e a página de Diário no mesmo evento 'online') compartilham a
+// mesma execução em andamento — evita envio duplicado e faz todos os
+// chamadores aguardarem a conclusão real antes de seguir.
+let sincronizacaoEmAndamento: Promise<void> | null = null;
+
 const getDB = (): Promise<IDBPDatabase<CampoLogDB>> => {
     if (!dbPromise) {
         dbPromise = openDB<CampoLogDB>(DB_NAME, DB_VERSION, {
@@ -68,33 +74,41 @@ export const offlineQueue = {
     // próxima tentativa, sem afetar os demais (operação atômica por chave).
     sincronizarPendentes: async (): Promise<void> => {
         if (!navigator.onLine) return;
+        if (sincronizacaoEmAndamento) return sincronizacaoEmAndamento;
 
-        const pendentes = await offlineQueue.obterFila();
-        if (pendentes.length === 0) return;
+        const executar = async () => {
+            const pendentes = await offlineQueue.obterFila();
+            if (pendentes.length === 0) return;
 
-        console.log(`📡 Sincronizando ${pendentes.length} registro(s) offline...`);
-        const db = await getDB();
+            console.log(`📡 Sincronizando ${pendentes.length} registro(s) offline...`);
+            const db = await getDB();
 
-        for (const item of pendentes) {
-            try {
-                const formData = new FormData();
-                formData.append('ciclo', String(item.ciclo));
-                formData.append('tipo', item.tipo);
-                formData.append('descricao', item.descricao);
-                if (item.anexo) {
-                    formData.append('anexo', item.anexo, item.anexoNome || 'anexo.jpg');
+            for (const item of pendentes) {
+                try {
+                    const formData = new FormData();
+                    formData.append('ciclo', String(item.ciclo));
+                    formData.append('tipo', item.tipo);
+                    formData.append('descricao', item.descricao);
+                    if (item.anexo) {
+                        formData.append('anexo', item.anexo, item.anexoNome || 'anexo.jpg');
+                    }
+
+                    await cadernoService.createRegisto(formData);
+
+                    // Sucesso confirmado pelo servidor → remove apenas este item.
+                    if (item._localId !== undefined) {
+                        await db.delete(STORE, item._localId);
+                    }
+                } catch (error) {
+                    // Mantém na fila e tenta novamente na próxima reconexão.
+                    console.error('Falha ao sincronizar item da fila offline.', error);
                 }
-
-                await cadernoService.createRegisto(formData);
-
-                // Sucesso confirmado pelo servidor → remove apenas este item.
-                if (item._localId !== undefined) {
-                    await db.delete(STORE, item._localId);
-                }
-            } catch (error) {
-                // Mantém na fila e tenta novamente na próxima reconexão.
-                console.error('Falha ao sincronizar item da fila offline.', error);
             }
-        }
+        };
+
+        sincronizacaoEmAndamento = executar().finally(() => {
+            sincronizacaoEmAndamento = null;
+        });
+        return sincronizacaoEmAndamento;
     },
 };

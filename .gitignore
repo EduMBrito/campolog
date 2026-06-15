@@ -12,6 +12,7 @@ venv/
 *.sqlite3
 db.sqlite3
 /media/
+backend/media/
 /staticfiles/
 
 # Environment
@@ -25,6 +26,7 @@ npm-debug.log*
 # Build
 frontend/dist/
 frontend/build/
+frontend/dev-dist/
 
 # IDE
 .vscode/
@@ -36,6 +38,7 @@ frontend/build/
 # OS
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 
 # Docker
 docker/data/

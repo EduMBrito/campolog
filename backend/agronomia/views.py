@@ -9,21 +9,22 @@ from caderno.models import RegistoCampo, UnidadeProdutiva
 from caderno.serializers import RegistoCampoSerializer
 from core.views import BaseTenantViewSet
 from core.permissions import RoleBasedPermission
+from core.audit import AuditMixin
 
 
-class CulturaViewSet(viewsets.ModelViewSet):
+class CulturaViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = Cultura.objects.all()
     serializer_class = CulturaSerializer
     permission_classes = [IsAuthenticated, RoleBasedPermission]
 
 
-class TalhaoViewSet(BaseTenantViewSet):
+class TalhaoViewSet(AuditMixin, BaseTenantViewSet):
     queryset = Talhao.objects.all()
     serializer_class = TalhaoSerializer
     permission_classes = [IsAuthenticated, RoleBasedPermission]
 
 
-class CicloCultivoViewSet(BaseTenantViewSet):
+class CicloCultivoViewSet(AuditMixin, BaseTenantViewSet):
     queryset = CicloCultivo.objects.all()
     serializer_class = CicloCultivoSerializer
     permission_classes = [IsAuthenticated, RoleBasedPermission]

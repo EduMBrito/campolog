@@ -265,6 +265,15 @@ X-Unidade-ID: <id_da_unidade_ativa>   # Obrigatório em rotas multi-tenant
 | `POST` | `/api/caderno/unidades/{id}/adicionar-usuario/` | Vincular usuário à unidade | ADMIN |
 | `POST` | `/api/caderno/unidades/{id}/remover-usuario/` | Desvincular usuário | ADMIN |
 | `GET` | `/api/caderno/relatorios/ciclo/{id}/` | Relatório público de rastreabilidade | Público |
+| **Auditoria** | | | |
+| `GET` | `/api/auditoria/logs/` | Trilha de auditoria (somente leitura) | AUDITOR / ADMIN |
+
+> **Trilha de auditoria:** toda criação, edição ou exclusão feita pela API é
+> registrada automaticamente em `LogAuditoria` (usuário, ação, entidade,
+> snapshot antes/depois, unidade e timestamp). O endpoint aceita os filtros
+> `?search=`, `?acao=CRIAR|ATUALIZAR|EXCLUIR`, `?entidade=` e `?ordering=`.
+> O ADMIN visualiza os logs de todas as unidades; o AUDITOR, apenas os da
+> unidade ativa.
 
 ### Exemplo de login
 
@@ -303,9 +312,11 @@ curl -X POST http://localhost:8000/api/caderno/diario/ \
 | **ADMIN** | Sim | Sim | Sim | Sim | Gestão de unidades e usuários |
 | **DOCENTE** | Sim | Sim | Sim | Sim | Escopo da sua unidade |
 | **DISCENTE** | Sim | Sim | Sim | Não | Sem exclusão |
-| **AUDITOR** | Sim | Não | Não | Não | Somente leitura |
+| **AUDITOR** | Sim | Não | Não | Não | Somente leitura + trilha de auditoria |
 
 Permissões são verificadas no backend via `RoleBasedPermission` (`core/permissions.py`). O frontend reflete o mesmo controle via hook `usePermissoes()`.
+
+O acesso à trilha de auditoria (`/api/auditoria/logs/` e a tela `/auditoria`) é restrito a **AUDITOR** e **ADMIN** via `CanViewAuditoria` (`core/permissions.py`).
 
 ---
 
@@ -341,6 +352,14 @@ RegistoCampo  (diário de campo)
   ├─ tipo: REGA | INSUMO | OBSERVACAO | COLHEITA | OUTRO
   ├─ descricao, quantidade
   └─ anexo (foto/vídeo — filesystem)
+
+LogAuditoria  (trilha de auditoria — registrada automaticamente)
+  ├─ usuario: FK → User (+ usuario_nome: snapshot)
+  ├─ unidade: FK → UnidadeProdutiva
+  ├─ acao: CRIAR | ATUALIZAR | EXCLUIR
+  ├─ entidade, entidade_id
+  ├─ dados_anteriores, dados_novos (JSON — snapshot antes/depois)
+  └─ timestamp (auto)
 ```
 
 Arquivos de mídia são salvos em `backend/media/` (organizado por data) e servidos pelo Nginx em `/media/`.
@@ -360,7 +379,8 @@ Arquivos de mídia são salvos em `backend/media/` (organizado por data) e servi
 | M6 | Gestão de Unidades Produtivas (multi-tenant) | Completo |
 | M7 | Rastreabilidade pública via QR Code + PDF | Parcial |
 | M8 | Modo Offline (PWA + IndexedDB + sync) | Completo (resolução de conflitos no [backlog](BACKLOG.md)) |
-| M9 | Auditoria e Fluxo de Aprovação Docente | Planejado |
+| M9 | Auditoria (trilha de logs F12) | Completo |
+| M9 | Fluxo de Aprovação Docente (N01) | Não iniciado — em avaliação (ver [backlog](BACKLOG.md)) |
 
 ---
 

@@ -6,6 +6,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from caderno.models import UnidadeProdutiva
+from .models import LogAuditoria
+from .serializers import LogAuditoriaSerializer
+from .permissions import CanViewAuditoria
 
 
 
@@ -48,5 +51,32 @@ class MinhasUnidadesView(APIView):
         
         # Formata a resposta manualmente (assim não precisamos criar um Serializer só para isto)
         dados = [{"id": u.id, "nome": u.nome} for u in unidades]
-        
+
         return Response(dados)
+
+
+class LogAuditoriaViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Consulta dos logs de auditoria (somente leitura), restrita a Auditor/Admin.
+
+    Administrador vê todos os logs; demais perfis autorizados veem apenas os da
+    unidade produtiva ativa (header X-Unidade-ID).
+    """
+    serializer_class = LogAuditoriaSerializer
+    permission_classes = [IsAuthenticated, CanViewAuditoria]
+    filterset_fields = ['acao', 'entidade', 'usuario']
+    search_fields = ['entidade', 'usuario_nome', 'entidade_id']
+    ordering_fields = ['timestamp', 'entidade', 'acao']
+
+    def get_queryset(self):
+        qs = LogAuditoria.objects.select_related('usuario', 'unidade').all()
+
+        if getattr(self.request.user, 'role', None) == 'ADMIN':
+            return qs
+
+        unidade_id = self.request.META.get('HTTP_X_UNIDADE_ID')
+        if unidade_id:
+            unidade_id = str(unidade_id).strip().strip('"').strip("'")
+            if unidade_id.isdigit():
+                return qs.filter(unidade_id=unidade_id)
+        return qs.none()

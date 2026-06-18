@@ -27,6 +27,8 @@ npm-debug.log*
 frontend/dist/
 frontend/build/
 frontend/dev-dist/
+frontend/*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 
 # IDE
 .vscode/

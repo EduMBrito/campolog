@@ -15,6 +15,7 @@ import DiarioCampo from './pages/DiarioCampo';
 import Rastreabilidade from './pages/Rastreabilidade';
 import SelecionarUnidade from './pages/SelecionarUnidade';
 import Unidades from './pages/Unidades'; // ➡️ Garanta que importou corretamente aqui
+import Auditoria from './pages/Auditoria';
 
 function AppRoutes() {
     const { user } = useContext(AuthContext);
@@ -38,6 +39,11 @@ function AppRoutes() {
                 <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                     <Route path="/usuarios" element={<UsuariosAdmin />} />
                     <Route path="/unidades" element={<Unidades />} />
+                </Route>
+
+                {/* Trilha de auditoria: leitura para Auditor e Admin */}
+                <Route element={<ProtectedRoute allowedRoles={['AUDITOR', 'ADMIN']} />}>
+                    <Route path="/auditoria" element={<Auditoria />} />
                 </Route>
                 
                 {/* Outras rotas do sistema móvel */}

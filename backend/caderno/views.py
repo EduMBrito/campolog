@@ -9,10 +9,12 @@ from .models import RegistoCampo, UnidadeProdutiva
 from agronomia.models import CicloCultivo
 from .serializers import RegistoCampoSerializer, RelatorioCicloSerializer, UnidadeSerializer
 from core.views import BaseTenantViewSet
+from core.audit import AuditMixin
+from core.models import LogAuditoria
 
-User = get_user_model() 
+User = get_user_model()
 
-class RegistoCampoViewSet(BaseTenantViewSet):
+class RegistoCampoViewSet(AuditMixin, BaseTenantViewSet):
     """API para gerir os registos diários do Caderno de Campo"""
     queryset = RegistoCampo.objects.all()
     serializer_class = RegistoCampoSerializer
@@ -22,11 +24,18 @@ class RegistoCampoViewSet(BaseTenantViewSet):
         unidade_id = self.request.META.get('HTTP_X_UNIDADE_ID')
         if not unidade_id:
             raise ValidationError({"detail": "Nenhuma unidade produtiva ativa informada."})
-        
+
         # Salva injetando o AUTOR e a UNIDADE ao mesmo tempo!
         serializer.save(autor=self.request.user, unidade_id=unidade_id)
+        # perform_update/destroy são auditados pelo AuditMixin; o create é
+        # registado aqui por causa da injeção de autor/unidade.
+        self.registrar_log(
+            LogAuditoria.Acao.CRIAR,
+            serializer.instance,
+            dados_novos=self.snapshot(serializer.instance),
+        )
 
-class UnidadeViewSet(viewsets.ModelViewSet):
+class UnidadeViewSet(AuditMixin, viewsets.ModelViewSet):
     """CRUD de Unidades Produtivas com gestão de usuários vinculados."""
     serializer_class = UnidadeSerializer
     permission_classes = [IsAuthenticated]
@@ -43,13 +52,31 @@ class UnidadeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         self.check_admin()
         serializer.save()
+        self.registrar_log(
+            LogAuditoria.Acao.CRIAR,
+            serializer.instance,
+            dados_novos=self.snapshot(serializer.instance),
+        )
 
     def perform_update(self, serializer):
         self.check_admin()
+        anteriores = self.snapshot(serializer.instance)
         serializer.save()
+        self.registrar_log(
+            LogAuditoria.Acao.ATUALIZAR,
+            serializer.instance,
+            dados_anteriores=anteriores,
+            dados_novos=self.snapshot(serializer.instance),
+        )
 
     def perform_destroy(self, instance):
         self.check_admin()
+        anteriores = self.snapshot(instance)
+        self.registrar_log(
+            LogAuditoria.Acao.EXCLUIR,
+            instance,
+            dados_anteriores=anteriores,
+        )
         instance.delete()
 
     @action(detail=True, methods=['post'], url_path='adicionar-usuario')
@@ -60,6 +87,11 @@ class UnidadeViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get(id=usuario_id)
             unidade.usuarios.add(user)
+            self.registrar_log(
+                LogAuditoria.Acao.ATUALIZAR,
+                unidade,
+                dados_novos={'evento': 'adicionar_usuario', 'usuario_id': user.id, 'usuario': user.username},
+            )
             return Response({'detail': f'Usuário {user.username} adicionado com sucesso.'})
         except User.DoesNotExist:
             return Response({'detail': 'Usuário não encontrado.'}, status=404)
@@ -72,6 +104,11 @@ class UnidadeViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get(id=usuario_id)
             unidade.usuarios.remove(user)
+            self.registrar_log(
+                LogAuditoria.Acao.ATUALIZAR,
+                unidade,
+                dados_anteriores={'evento': 'remover_usuario', 'usuario_id': user.id, 'usuario': user.username},
+            )
             return Response({'detail': f'Usuário {user.username} removido com sucesso.'})
         except User.DoesNotExist:
             return Response({'detail': 'Usuário não encontrado.'}, status=404)

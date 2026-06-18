@@ -1,0 +1,170 @@
+.container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  color: #1E293B;
+}
+
+.topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.voltar {
+  font-size: 0.9rem;
+  color: #2D5A27;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.titulo {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0 0 0.3rem 0;
+}
+
+.subtitulo {
+  color: #64748B;
+  margin: 0 0 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 1.5rem;
+}
+
+.input,
+.select {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #F8FAFC;
+  color: #1E293B;
+}
+
+.input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.tabelaWrap {
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tabela th {
+  text-align: left;
+  padding: 0.8rem 1rem;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+}
+
+.tabela td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.linha {
+  cursor: pointer;
+}
+
+.linha:hover {
+  background: #F8FAFC;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: bold;
+  padding: 0.15rem 0.55rem;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.badgeCriar { background: #E8F5E9; color: #2D5A27; }
+.badgeAtualizar { background: #FFF3E0; color: #B45309; }
+.badgeExcluir { background: #FEE2E2; color: #DC2626; }
+
+.entidadeTag {
+  font-weight: 600;
+}
+.entidadeId {
+  color: #94A3B8;
+  font-size: 0.8rem;
+}
+
+.expandIcon {
+  color: #94A3B8;
+  font-size: 0.8rem;
+}
+
+.detalhe {
+  background: #F8FAFC;
+}
+
+.detalheConteudo {
+  padding: 1rem 1.25rem;
+}
+
+.diffTabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.diffTabela th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  color: #64748B;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.diffTabela td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #EDF1F5;
+  vertical-align: top;
+}
+
+.diffCampo { font-weight: 600; color: #334155; white-space: nowrap; }
+.valAntes { color: #B91C1C; word-break: break-word; }
+.valDepois { color: #15803D; word-break: break-word; }
+.valNeutro { color: #475569; word-break: break-word; }
+
+.vazio {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #64748B;
+}
+
+.carregando {
+  text-align: center;
+  padding: 3rem;
+  color: #64748B;
+}

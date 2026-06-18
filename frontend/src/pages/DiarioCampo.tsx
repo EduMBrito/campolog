@@ -31,8 +31,13 @@ export default function Diario() {
     // Anexo de mídia
     const [arquivoAnexo, setArquivoAnexo] = useState<File | null>(null);
     const [previewAnexo, setPreviewAnexo] = useState<string | null>(null);
+    // URL do anexo já salvo no servidor (exibido ao editar um registro existente)
+    const [anexoExistente, setAnexoExistente] = useState<string | null>(null);
     const refAnexo = useRef<HTMLInputElement>(null);
     const formRef = useRef<HTMLFormElement>(null);
+
+    // Detecta se a URL/arquivo aponta para uma imagem (para decidir miniatura)
+    const ehImagem = (url: string) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
 
     // Filtro por tipo no histórico
     const [filtroTipo, setFiltroTipo] = useState('');
@@ -95,6 +100,8 @@ export default function Diario() {
     const handleArquivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
         setArquivoAnexo(file);
+        // Ao escolher um novo arquivo, ele substitui o anexo existente na pré-visualização
+        if (file) setAnexoExistente(null);
         if (file && file.type.startsWith('image/')) {
             setPreviewAnexo(URL.createObjectURL(file));
         } else {
@@ -195,6 +202,9 @@ export default function Diario() {
         setNomeInsumo('');
         setArquivoAnexo(null);
         setPreviewAnexo(null);
+        // Mostra o anexo já salvo (se houver) para que a miniatura apareça na edição
+        setAnexoExistente(reg.anexo || null);
+        if (refAnexo.current) refAnexo.current.value = '';
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
@@ -239,6 +249,7 @@ export default function Diario() {
         setNomeInsumo('');
         setArquivoAnexo(null);
         setPreviewAnexo(null);
+        setAnexoExistente(null);
         if (refAnexo.current) refAnexo.current.value = '';
     };
 
@@ -372,15 +383,21 @@ export default function Diario() {
                             📎 Selecionar Arquivo
                         </button>
 
-                        {arquivoAnexo && (
+                        {(arquivoAnexo || anexoExistente) && (
                             <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.9rem', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                {previewAnexo && (
+                                {previewAnexo ? (
                                     <img src={previewAnexo} alt="preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                                ) : anexoExistente && ehImagem(anexoExistente) ? (
+                                    <img src={anexoExistente} alt="anexo atual" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                                ) : (
+                                    <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>📄</span>
                                 )}
                                 <span style={{ fontSize: '0.85rem', color: '#334155', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {arquivoAnexo.name}
+                                    {arquivoAnexo
+                                        ? arquivoAnexo.name
+                                        : <>Anexo atual <small style={{ color: '#94A3B8' }}>(selecione um arquivo para substituir)</small></>}
                                 </span>
-                                <button type="button" onClick={() => { setArquivoAnexo(null); setPreviewAnexo(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0 }}>
+                                <button type="button" onClick={() => { setArquivoAnexo(null); setPreviewAnexo(null); setAnexoExistente(null); if (refAnexo.current) refAnexo.current.value = ''; }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0 }}>
                                     ✕
                                 </button>
                             </div>
